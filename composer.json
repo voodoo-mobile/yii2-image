@@ -1,0 +1,42 @@
+{
+  "name": "voodoo-mobile/yii2-image",
+  "type": "library",
+  "description": "The library for managing images",
+  "keywords": [
+    "images"
+  ],
+  "homepage": "https://github.com/voodoo-mobile/yii2-image",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Voodoo Mobile Ltd",
+      "email": "public@voodoo-mobile.com",
+      "homepage": "http://voodoo-mobile.com"
+    }
+  ],
+  "minimum-stability": "dev",
+  "require": {
+    "php": ">=5.5.0",
+    "yiisoft/yii2": "~2.0",
+    "vm/yii2-core": "dev-develop",
+    "voodoo-mobile/yii2-upload": "dev-develop",
+    "yiisoft/yii2-imagine": "*"
+  },
+  "autoload": {
+    "psr-0": {
+      "Image": "src"
+    },
+    "psr-4": {
+      "vm\\image\\": "src/"
+    }
+  },
+  "extra": {
+    "asset-installer-paths": {
+      "npm-asset-library": "vendor/npm",
+      "bower-asset-library": "vendor/bower"
+    },
+    "writable": [
+      "runtime"
+    ]
+  }
+}
