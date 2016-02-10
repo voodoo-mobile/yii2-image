@@ -1,12 +1,12 @@
 <?php
 namespace vm\image;
 
-use vm\core\ModelException;
 use vm\upload\Base64Source;
 use vm\upload\FileWriter;
 use vm\upload\ModelSource;
 use vm\upload\Source;
 use Yii;
+use yii\base\Exception;
 use yii\behaviors\AttributeBehavior;
 use yii\db\ActiveRecord;
 use yii\db\BaseActiveRecord;
@@ -15,6 +15,7 @@ use yii\validators\UrlValidator;
 use yii\web\UploadedFile;
 
 /** @noinspection SpellCheckingInspection */
+
 /**
  * Class ImageBehavior
  * @package vm\image
@@ -153,7 +154,7 @@ class ImageBehavior extends AttributeBehavior
             $owner = $this->owner;
 
             if (!$owner->save(false)) {
-                throw new ModelException($owner);
+                throw new Exception('Cannot save model because of: ' . var_export($owner->errors));
             }
 
             $this->saving = false;

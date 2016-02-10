@@ -16,9 +16,8 @@
   ],
   "minimum-stability": "dev",
   "require": {
-    "php": ">=5.5.0",
+    "php": ">=5.4.0",
     "yiisoft/yii2": "~2.0",
-    "vm/yii2-core": "dev-develop",
     "voodoo-mobile/yii2-upload": "dev-develop",
     "yiisoft/yii2-imagine": "*"
   },
