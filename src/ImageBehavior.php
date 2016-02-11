@@ -51,7 +51,7 @@ class ImageBehavior extends AttributeBehavior
     public $resize = [Placeholder::DEFAULT_SIZE, Placeholder::DEFAULT_SIZE];
 
     /**
-     * @var bool. Determines whether the image need to be cropped when it is resized. True by default
+     * @var bool. Determines whether the image need to be cropped when it is resized. False by default
      */
     public $crop = false;
 
