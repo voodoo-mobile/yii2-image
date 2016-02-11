@@ -10,9 +10,10 @@ use vm\upload\UploadedFile;
 use yii\imagine\Image;
 
 /** @noinspection SpellCheckingInspection */
+
 /**
  * Class UploadedImage
- * @package yii2vm\web
+ * @package vm\image
  *
  *          Pretty same as [[UploadedFile]] but provides some addtiional methods for managing image files
  */

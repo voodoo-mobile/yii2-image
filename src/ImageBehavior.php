@@ -184,12 +184,14 @@ class ImageBehavior extends AttributeBehavior
     /**
      * Returns a thumbnail for the image. It will create it the thumbnail is missing or reuse existing otherwise
      *
-     * @param $attribute
-     * @param $dimension . Desired dimension of the thumbnail. For example 120 or [120, 120]
+     * @param      $attribute
+     * @param      $dimension . Desired dimension of the thumbnail. For example 120 or [120, 120]
+     *
+     * @param bool $absoluteUrl
      *
      * @return mixed|null|string
      */
-    public function thumbnail($attribute, $dimension)
+    public function thumbnail($attribute, $dimension, $absoluteUrl = true)
     {
 
         /** @var ActiveRecord $owner */
@@ -201,7 +203,7 @@ class ImageBehavior extends AttributeBehavior
         }
 
         if ($value && file_exists($value)) {
-            return Url::to('@web/' . (new Thumbnailer(['imagePath' => $value]))->generate($dimension), true);
+            return Url::to('@web/' . (new Thumbnailer(['imagePath' => $value]))->generate($dimension), $absoluteUrl);
         }
 
         return null;
