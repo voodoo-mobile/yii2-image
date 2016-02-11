@@ -1,10 +1,11 @@
 <?php
-namespace vm\image;
 
-/** @noinspection SpellCheckingInspection */
+namespace vm\image\placeholders;
+
+    /** @noinspection SpellCheckingInspection */
 /**
  * Class PlaceKitten
- * @package vm\image
+ * @package vm\image\placeholders
  *
  *          Default implementation of Placeholder using http://placebear.com service for generating placeholders
  */
