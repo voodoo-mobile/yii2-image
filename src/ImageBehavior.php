@@ -52,7 +52,7 @@ class ImageBehavior extends AttributeBehavior
     public $resize = [Placeholder::DEFAULT_SIZE, Placeholder::DEFAULT_SIZE];
 
     /**
-     * @var bool. Determines whether the image need to be cropped when it is resized. True by default
+     * @var bool. Determines whether the image need to be cropped when it is resized. False by default
      */
     public $crop = false;
 
@@ -193,8 +193,6 @@ class ImageBehavior extends AttributeBehavior
      */
     public function thumbnail($attribute, $dimension, $absoluteUrl = true)
     {
-
-        /** @var ActiveRecord $owner */
         $owner = $this->owner;
         $value = $owner->getAttribute($attribute);
 
@@ -204,6 +202,13 @@ class ImageBehavior extends AttributeBehavior
 
         if ($value && file_exists($value)) {
             return Url::to('@web/' . (new Thumbnailer(['imagePath' => $value]))->generate($dimension), $absoluteUrl);
+        }
+
+        if ($this->placeholder) {
+
+            list($width, $height) = Utils::getDimension($dimension);
+
+            return call_user_func([$this->placeholder, 'getImage'], $width, $height);
         }
 
         return null;
