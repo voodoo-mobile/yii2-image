@@ -5,6 +5,7 @@ use vm\upload\Base64Source;
 use vm\upload\FileWriter;
 use vm\upload\ModelSource;
 use vm\upload\Source;
+use vm\upload\UploadedFileSource;
 use Yii;
 use yii\base\Exception;
 use yii\behaviors\AttributeBehavior;
@@ -113,6 +114,8 @@ class ImageBehavior extends AttributeBehavior
 
         if (is_string($this->source) && strlen($this->source)) {
             $source = Base64Source::create($this->source);
+        } elseif ($this->source instanceof UploadedFile) {
+            $source = UploadedFileSource::create($this->source);
         } elseif ($instance = UploadedFile::getInstance($owner, $this->getSourceAttribute())) {
             $source = ModelSource::create($owner, $this->getSourceAttribute());
         }
