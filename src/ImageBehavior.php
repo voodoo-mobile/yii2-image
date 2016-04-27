@@ -240,6 +240,7 @@ class ImageBehavior extends AttributeBehavior
         }
 
         if ($this->placeholder) {
+
             $dimension = $this->resize ?: [Placeholder::DEFAULT_SIZE, Placeholder::DEFAULT_SIZE];
 
             list($width, $height) = Utils::getDimension($dimension);
