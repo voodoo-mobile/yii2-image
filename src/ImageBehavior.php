@@ -1,11 +1,11 @@
 <?php
-namespace vm\image;
+namespace vr\image;
 
-use vm\upload\Base64Source;
-use vm\upload\FileWriter;
-use vm\upload\ModelSource;
-use vm\upload\Source;
-use vm\upload\UploadedFileSource;
+use vr\upload\Base64Source;
+use vr\upload\FileWriter;
+use vr\upload\ModelSource;
+use vr\upload\Source;
+use vr\upload\UploadedFileSource;
 use Yii;
 use yii\base\Exception;
 use yii\behaviors\AttributeBehavior;
@@ -19,12 +19,9 @@ use yii\web\UploadedFile;
 
 /**
  * Class ImageBehavior
- * @package vm\image
- *
+ * @package vr\image
  * @property string $sourceAttribute
- *
  *          Behavior for manipulating images
- *
  *          public function behaviors()
  *          {
  *              return [
@@ -58,15 +55,21 @@ class ImageBehavior extends AttributeBehavior
     public $crop = false;
 
     /**
-     * @var \Closure | null. Placeholder factory that generates placeholder images in case of any problems with the real image
+     * @var \Closure | null. Placeholder factory that generates placeholder images in case of any problems with the
+     *      real image
      */
     public $placeholder;
 
     /**
-     * @var string. Suffix of the variable that is linked to the content. This variable will be used for forms and code. For
-     *      example if the image attribute is image then source attribute will be image_source
+     * @var string. Suffix of the variable that is linked to the content. This variable will be used for forms and
+     *      code. For example if the image attribute is image then source attribute will be image_source
      */
     public $suffix = '_source';
+
+    /**
+     * @var string
+     */
+    public $baseUrl = '@web';
 
     /**
      * @var mixed Variable that contains the content. It can be base64 or [\yii\web\UploadedFile]
@@ -88,7 +91,7 @@ class ImageBehavior extends AttributeBehavior
         if (empty($this->attributes)) {
             $this->attributes = [
                 BaseActiveRecord::EVENT_AFTER_INSERT => $this->imageAttribute,
-                BaseActiveRecord::EVENT_AFTER_UPDATE => $this->imageAttribute
+                BaseActiveRecord::EVENT_AFTER_UPDATE => $this->imageAttribute,
             ];
         }
 
@@ -126,7 +129,7 @@ class ImageBehavior extends AttributeBehavior
 
         /** @var UploadedImage $uploaded */
         $uploaded = new UploadedImage([
-            'source' => $source
+            'source' => $source,
         ]);
 
         if ($this->resize) {
@@ -185,18 +188,51 @@ class ImageBehavior extends AttributeBehavior
     }
 
     /**
+     * @inheritdoc
+     */
+    public function canSetProperty($name, $checkVars = true)
+    {
+        return parent::canSetProperty($name, $checkVars) || $this->isSourceAttribute($name);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function canGetProperty($name, $checkVars = true)
+    {
+        return parent::canGetProperty($name, $checkVars) || $this->isSourceAttribute($name);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    private function getSourceAttribute()
+    {
+        return $this->imageAttribute . $this->suffix;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    private function isSourceAttribute($name)
+    {
+        return $name == $this->getSourceAttribute();
+    }
+
+    /**
      * Returns a thumbnail for the image. It will create it the thumbnail is missing or reuse existing otherwise
      *
      * @param      $attribute
      * @param      $dimension . Desired dimension of the thumbnail. For example 120 or [120, 120]
-     *
      * @param bool $absoluteUrl
      *
      * @return mixed|null|string
      */
     public function thumbnail($attribute, $dimension, $absoluteUrl = true)
     {
+        /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
+
         $value = $owner->getAttribute($attribute);
 
         if ((new UrlValidator())->validate($value)) {
@@ -249,37 +285,5 @@ class ImageBehavior extends AttributeBehavior
         }
 
         return null;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function canSetProperty($name, $checkVars = true)
-    {
-        return parent::canSetProperty($name, $checkVars) || $this->isSourceAttribute($name);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function canGetProperty($name, $checkVars = true)
-    {
-        return parent::canGetProperty($name, $checkVars) || $this->isSourceAttribute($name);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    private function getSourceAttribute()
-    {
-        return $this->imageAttribute . $this->suffix;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    private function isSourceAttribute($name)
-    {
-        return $name == $this->getSourceAttribute();
     }
 }

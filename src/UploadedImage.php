@@ -1,19 +1,19 @@
 <?php
 
-namespace vm\image;
+namespace vr\image;
 
 use Imagine\Image\Box;
 use Imagine\Image\BoxInterface;
 use Imagine\Image\ImageInterface;
 use Imagine\Image\Point;
-use vm\upload\UploadedFile;
+use vr\upload\UploadedFile;
 use yii\imagine\Image;
 
 /** @noinspection SpellCheckingInspection */
 
 /**
  * Class UploadedImage
- * @package vm\image
+ * @package vr\image
  *
  *          Pretty same as [[UploadedFile]] but provides some addtiional methods for managing image files
  */

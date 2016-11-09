@@ -1,5 +1,5 @@
 <?php
-namespace vm\image;
+namespace vr\image;
 
 use yii\base\Component;
 use yii\helpers\ArrayHelper;
@@ -8,7 +8,7 @@ use yii\imagine\Image;
 
 /**
  * Class Thumbnailer
- * @package vm\image
+ * @package vr\image
  *
  *          Generates thumbnails for the selected file identified by its path.
  *          Use:

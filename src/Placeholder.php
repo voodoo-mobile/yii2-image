@@ -1,18 +1,16 @@
 <?php
-namespace vm\image;
+namespace vr\image;
 
 use yii\base\Component;
 
 /**
  * Class Placeholder
- * @package vm\image
- *
+ * @package vr\image
  *          Provides the way to return a placeholder.
  *          Use:
  *              set up value as function($width, $height) {
  *                                  return 'http://imagegenerator.com/width/height';
  *                              }
- *
  *          This class is used in ImageBehavior. In most cases no need to use it directly
  */
 class Placeholder extends Component
