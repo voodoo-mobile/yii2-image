@@ -1,11 +1,11 @@
 <?php
-namespace vm\image;
+namespace vr\image;
 
 use yii\helpers\ArrayHelper;
 
 /**
  * Class Utils
- * @package vm\image
+ * @package vr\image
  *
  *          Contains the set of helpful methods for images
  */

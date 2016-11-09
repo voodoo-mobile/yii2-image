@@ -1,12 +1,12 @@
 <?php
 
-namespace vm\image\placeholders;
+namespace vr\image\placeholders;
 
-    /** @noinspection SpellCheckingInspection */
+use vr\image\Placeholder;
+
 /**
- * Class PlaceKitten
- * @package vm\image\placeholders
- *
+ * Class PlaceBear
+ * @package vr\image\placeholders
  *          Default implementation of Placeholder using http://placebear.com service for generating placeholders
  */
 class PlaceBear extends Placeholder
