@@ -14,7 +14,6 @@ use yii\imagine\Image;
 /**
  * Class UploadedImage
  * @package vr\image
- *
  *          Pretty same as [[UploadedFile]] but provides some addtiional methods for managing image files
  */
 class UploadedImage extends UploadedFile
@@ -23,7 +22,7 @@ class UploadedImage extends UploadedFile
      * @var int[] | null Size of the box that will be used for resizing an image. The image will be reduced or enlarged
      *      proportionally to fill the box
      */
-    public $resize;
+    public $resize = false;
 
     /**
      * @var bool Identifies if the image need to be cropped by the provided size
@@ -71,7 +70,6 @@ class UploadedImage extends UploadedFile
      * @param ImageInterface $imagine
      *
      * @return BoxInterface
-     *
      */
     private function performResize($imagine)
     {
