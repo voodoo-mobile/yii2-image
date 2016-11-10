@@ -14,6 +14,7 @@ use yii\imagine\Image;
 /**
  * Class UploadedImage
  * @package vr\image
+ *
  *          Pretty same as [[UploadedFile]] but provides some addtiional methods for managing image files
  */
 class UploadedImage extends UploadedFile
@@ -22,7 +23,7 @@ class UploadedImage extends UploadedFile
      * @var int[] | null Size of the box that will be used for resizing an image. The image will be reduced or enlarged
      *      proportionally to fill the box
      */
-    public $resize = false;
+    public $resize;
 
     /**
      * @var bool Identifies if the image need to be cropped by the provided size
@@ -33,14 +34,14 @@ class UploadedImage extends UploadedFile
      * Sets up the box for the uploaded image as a boundary
      *
      * @param int | int[] $dimension One or two dimensions of the box. In case of integer it will make a square box
-     * @param bool        $crop      Determines if the image need to be cropped
+     * @param bool $crop Determines if the image need to be cropped
      *
      * @return $this
      */
     public function resize($dimension, $crop = true)
     {
         $this->resize = $dimension;
-        $this->crop   = $crop;
+        $this->crop = $crop;
 
         return $this;
     }
@@ -52,14 +53,14 @@ class UploadedImage extends UploadedFile
     {
         $filename = parent::save($writer);
 
-        /** @var ImageInterface $imagine */
-        $imagine = Image::getImagine()->open($filename);
-
         if ($this->resize) {
-            $this->performResize($imagine);
-        }
+            /** @var ImageInterface $imagine */
+            $imagine = Image::getImagine()->open($filename);
 
-        $imagine->save($filename);
+            $this->performResize($imagine);
+
+            $imagine->save($filename);
+        }
 
         return $filename;
     }
@@ -70,6 +71,7 @@ class UploadedImage extends UploadedFile
      * @param ImageInterface $imagine
      *
      * @return BoxInterface
+     *
      */
     private function performResize($imagine)
     {
