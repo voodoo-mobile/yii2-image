@@ -2,7 +2,6 @@
 namespace vr\image;
 
 use vr\upload\Base64Source;
-use vr\upload\FileWriter;
 use vr\upload\ModelSource;
 use vr\upload\Source;
 use vr\upload\UploadedFileSource;
@@ -47,7 +46,7 @@ class ImageBehavior extends AttributeBehavior
     /**
      * @var int[] | int | null. Determines if the image needs to be resized when uploading or updating
      */
-    public $resize = [Placeholder::DEFAULT_SIZE, Placeholder::DEFAULT_SIZE];
+    public $resize = false;
 
     /**
      * @var bool. Determines whether the image need to be cropped when it is resized. False by default
@@ -72,10 +71,14 @@ class ImageBehavior extends AttributeBehavior
     public $baseUrl = '@web';
 
     /**
+     * @var string
+     */
+    public $writer = '\vr\upload\FileWriter';
+
+    /**
      * @var mixed Variable that contains the content. It can be base64 or [\yii\web\UploadedFile]
      */
     private $source = null;
-
     /**
      * @var bool It is used only for internal process optimization. Please don't pay your attention to it
      */
@@ -98,52 +101,6 @@ class ImageBehavior extends AttributeBehavior
         if ($this->placeholder) {
             $this->placeholder = Yii::createObject($this->placeholder);
         }
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function getValue($event)
-    {
-        /** @var ActiveRecord $owner */
-        $owner = $this->owner;
-
-        if ($this->saving) {
-            return $owner->{$this->imageAttribute};
-        }
-
-        /** @var Source $source */
-        $source = null;
-
-        if (is_string($this->source) && strlen($this->source)) {
-            $source = Base64Source::create($this->source);
-        } elseif ($this->source instanceof UploadedFile) {
-            $source = UploadedFileSource::create($this->source);
-        } elseif ($instance = UploadedFile::getInstance($owner, $this->getSourceAttribute())) {
-            $source = ModelSource::create($owner, $this->getSourceAttribute());
-        }
-
-        if (!$source) {
-            return $owner->{$this->imageAttribute};
-        }
-
-        /** @var UploadedImage $uploaded */
-        $uploaded = new UploadedImage([
-            'source' => $source,
-        ]);
-
-        if ($this->resize) {
-            $uploaded->resize($this->resize, $this->crop);
-        }
-
-        $writer = (new FileWriter())->useActiveRecord($owner, $this->imageAttribute);
-        $path   = $uploaded->save($writer);
-
-        if (!$this->saving) {
-            (new Thumbnailer(['imagePath' => $path]))->clear();
-        }
-
-        return $path;
     }
 
     /**
@@ -190,17 +147,9 @@ class ImageBehavior extends AttributeBehavior
     /**
      * @inheritdoc
      */
-    public function canSetProperty($name, $checkVars = true)
+    private function isSourceAttribute($name)
     {
-        return parent::canSetProperty($name, $checkVars) || $this->isSourceAttribute($name);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function canGetProperty($name, $checkVars = true)
-    {
-        return parent::canGetProperty($name, $checkVars) || $this->isSourceAttribute($name);
+        return $name == $this->getSourceAttribute();
     }
 
     /**
@@ -214,9 +163,17 @@ class ImageBehavior extends AttributeBehavior
     /**
      * @inheritdoc
      */
-    private function isSourceAttribute($name)
+    public function canSetProperty($name, $checkVars = true)
     {
-        return $name == $this->getSourceAttribute();
+        return parent::canSetProperty($name, $checkVars) || $this->isSourceAttribute($name);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function canGetProperty($name, $checkVars = true)
+    {
+        return parent::canGetProperty($name, $checkVars) || $this->isSourceAttribute($name);
     }
 
     /**
@@ -264,15 +221,18 @@ class ImageBehavior extends AttributeBehavior
     {
         /** @var ActiveRecord $owner */
         $owner = $this->owner;
-
         $value = $owner->getAttribute($attribute);
+
 
         if ((new UrlValidator())->validate($value)) {
             return $value;
         }
 
-        if ($value && file_exists($value)) {
-            return Url::to('@web/' . $value, true);
+        $baseUrl = trim($this->baseUrl, '/');
+        $utm = md5(uniqid());
+
+        if ($value) {
+            return Url::to("{$baseUrl}/{$value}?utm={$utm}", true);
         }
 
         if ($this->placeholder) {
@@ -285,5 +245,54 @@ class ImageBehavior extends AttributeBehavior
         }
 
         return null;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function getValue($event)
+    {
+        /** @var ActiveRecord $owner */
+        $owner = $this->owner;
+
+        if ($this->saving) {
+            return $owner->{$this->imageAttribute};
+        }
+
+        /** @var Source $source */
+        $source = null;
+
+        if (is_string($this->source) && strlen($this->source)) {
+            $source = Base64Source::create($this->source);
+        } elseif ($this->source instanceof UploadedFile) {
+            $source = UploadedFileSource::create($this->source);
+        } elseif ($instance = UploadedFile::getInstance($owner, $this->getSourceAttribute())) {
+            $source = ModelSource::create($owner, $this->getSourceAttribute());
+        }
+
+        if (!$source) {
+            return $owner->{$this->imageAttribute};
+        }
+
+        /** @var UploadedImage $uploaded */
+        $uploaded = new UploadedImage([
+            'source' => $source,
+            'resize' => $this->resize
+        ]);
+
+        if ($this->resize) {
+            $uploaded->resize($this->resize, $this->crop);
+        }
+
+        $writer = Yii::createObject($this->writer);
+
+        $writer = call_user_func([$writer, 'useActiveRecord'], $owner, $this->imageAttribute);
+        $path = $uploaded->save($writer);
+
+        if (!$this->saving) {
+            (new Thumbnailer(['imagePath' => $path]))->clear();
+        }
+
+        return $path;
     }
 }
