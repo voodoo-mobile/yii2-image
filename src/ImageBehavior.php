@@ -1,18 +1,11 @@
 <?php
 namespace vr\image;
 
-use vr\upload\Base64Source;
-use vr\upload\ModelSource;
-use vr\upload\Source;
-use vr\upload\UploadedFileSource;
 use Yii;
 use yii\base\Exception;
 use yii\behaviors\AttributeBehavior;
 use yii\db\ActiveRecord;
 use yii\db\BaseActiveRecord;
-use yii\helpers\Url;
-use yii\validators\UrlValidator;
-use yii\web\UploadedFile;
 
 /** @noinspection SpellCheckingInspection */
 
@@ -21,43 +14,16 @@ use yii\web\UploadedFile;
  * @package vr\image
  * @property string $sourceAttribute
  *          Behavior for manipulating images
- *          public function behaviors()
- *          {
- *              return [
- *                  [
- *                      'class'          => ImageBehavior::className(),
- *                      'imageAttribute' => 'image',
- *                      'resize'         => [640, 640],
- *                      'crop'           => true,
- *                      'placeholder'    => [
- *                          'class' => LoremPixelPlaceholder::className()
- *                      ]
- *                  ],
- *              ];
+ *          public function behaviors() {
+ *
  *          }
  */
 class ImageBehavior extends AttributeBehavior
 {
     /**
-     * @var string. Attribute that contains the image path / url
+     * @var array[]
      */
-    public $imageAttribute = 'image';
-
-    /**
-     * @var int[] | int | null. Determines if the image needs to be resized when uploading or updating
-     */
-    public $resize = false;
-
-    /**
-     * @var bool. Determines whether the image need to be cropped when it is resized. False by default
-     */
-    public $crop = false;
-
-    /**
-     * @var \Closure | null. Placeholder factory that generates placeholder images in case of any problems with the
-     *      real image
-     */
-    public $placeholder;
+    public $imageAttributes = [];
 
     /**
      * @var string. Suffix of the variable that is linked to the content. This variable will be used for forms and
@@ -66,23 +32,14 @@ class ImageBehavior extends AttributeBehavior
     public $suffix = '_source';
 
     /**
-     * @var string
-     */
-    public $baseUrl = '@web';
-
-    /**
-     * @var string
-     */
-    public $writer = '\vr\upload\FileWriter';
-
-    /**
-     * @var mixed Variable that contains the content. It can be base64 or [\yii\web\UploadedFile]
-     */
-    private $source = null;
-    /**
      * @var bool It is used only for internal process optimization. Please don't pay your attention to it
      */
     private $saving = false;
+
+    /**
+     * @var null
+     */
+    private $descriptors = null;
 
     /**
      * @inheritdoc
@@ -93,13 +50,18 @@ class ImageBehavior extends AttributeBehavior
 
         if (empty($this->attributes)) {
             $this->attributes = [
-                BaseActiveRecord::EVENT_AFTER_INSERT => $this->imageAttribute,
-                BaseActiveRecord::EVENT_AFTER_UPDATE => $this->imageAttribute,
+                BaseActiveRecord::EVENT_AFTER_INSERT => $this->imageAttributes,
+                BaseActiveRecord::EVENT_AFTER_UPDATE => $this->imageAttributes,
             ];
-        }
 
-        if ($this->placeholder) {
-            $this->placeholder = Yii::createObject($this->placeholder);
+            foreach ($this->imageAttributes as $attribute => $params) {
+                $this->descriptors[$attribute] = Yii::createObject($params + [
+                        'class'           => '\vr\image\ImageAttributeDescriptor',
+                        'attribute'       => $attribute,
+                        'sourceAttribute' => $attribute . $this->suffix
+                    ]
+                );
+            }
         }
     }
 
@@ -109,12 +71,16 @@ class ImageBehavior extends AttributeBehavior
     public function evaluateAttributes($event)
     {
         if (!$this->saving) {
-            parent::evaluateAttributes($event);
-
-            $this->saving = true;
 
             /** @var ActiveRecord $owner */
             $owner = $this->owner;
+
+            /** @var ImageAttributeDescriptor $descriptor */
+            foreach ($this->descriptors as $descriptor) {
+                $owner->{$descriptor->attribute} = $descriptor->getValue($owner);
+            }
+
+            $this->saving = true;
 
             if (!$owner->save(false)) {
                 throw new Exception('Cannot save model because of: ' . var_export($owner->errors));
@@ -129,7 +95,11 @@ class ImageBehavior extends AttributeBehavior
      */
     public function __get($name)
     {
-        return $this->isSourceAttribute($name) ? $this->source : $this->owner->__get($name);
+        if ($attribute = $this->getBaseAttribute($name)) {
+            return $this->descriptors[$attribute]->source;
+        }
+
+        return $this->owner->__get($name);
     }
 
     /**
@@ -137,27 +107,26 @@ class ImageBehavior extends AttributeBehavior
      */
     public function __set($name, $value)
     {
-        if ($this->isSourceAttribute($name)) {
-            $this->source = $value;
+        if ($attribute = $this->getBaseAttribute($name)) {
+            $this->descriptors[$attribute]->source = $value;
         } else {
             parent::__set($name, $value);
         }
     }
 
     /**
-     * @inheritdoc
+     * @param $name
+     * @return int|null|string
      */
-    private function isSourceAttribute($name)
+    private function getBaseAttribute($name)
     {
-        return $name == $this->getSourceAttribute();
-    }
+        foreach ($this->imageAttributes as $attribute => $params) {
+            if ($attribute . $this->suffix == $name) {
+                return $attribute;
+            }
+        }
 
-    /**
-     * @inheritdoc
-     */
-    private function getSourceAttribute()
-    {
-        return $this->imageAttribute . $this->suffix;
+        return null;
     }
 
     /**
@@ -166,6 +135,14 @@ class ImageBehavior extends AttributeBehavior
     public function canSetProperty($name, $checkVars = true)
     {
         return parent::canSetProperty($name, $checkVars) || $this->isSourceAttribute($name);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    private function isSourceAttribute($name)
+    {
+        return $this->getBaseAttribute($name) != null;
     }
 
     /**
@@ -187,27 +164,8 @@ class ImageBehavior extends AttributeBehavior
      */
     public function thumbnail($attribute, $dimension, $absoluteUrl = true)
     {
-        /** @var BaseActiveRecord $owner */
-        $owner = $this->owner;
-
-        $value = $owner->getAttribute($attribute);
-
-        if ((new UrlValidator())->validate($value)) {
-            return $value;
-        }
-
-        if ($value && file_exists($value)) {
-            return Url::to('@web/' . (new Thumbnailer(['imagePath' => $value]))->generate($dimension), $absoluteUrl);
-        }
-
-        if ($this->placeholder) {
-
-            list($width, $height) = Utils::getDimension($dimension);
-
-            return call_user_func([$this->placeholder, 'getImage'], $width, $height);
-        }
-
-        return null;
+        /** @noinspection PhpUndefinedMethodInspection */
+        return $this->descriptors[$attribute]->thumbnail($this->owner, $dimension, $absoluteUrl);
     }
 
     /**
@@ -215,84 +173,12 @@ class ImageBehavior extends AttributeBehavior
      *
      * @param $attribute
      *
+     * @param bool $utm
      * @return mixed|null|string URI of the image
      */
-    public function url($attribute)
+    public function url($attribute, $utm = false)
     {
-        /** @var ActiveRecord $owner */
-        $owner = $this->owner;
-        $value = $owner->getAttribute($attribute);
-
-
-        if ((new UrlValidator())->validate($value)) {
-            return $value;
-        }
-
-        $baseUrl = trim($this->baseUrl, '/');
-        $utm = md5(uniqid());
-
-        if ($value) {
-            return Url::to("{$baseUrl}/{$value}?utm={$utm}", true);
-        }
-
-        if ($this->placeholder) {
-
-            $dimension = $this->resize ?: [Placeholder::DEFAULT_SIZE, Placeholder::DEFAULT_SIZE];
-
-            list($width, $height) = Utils::getDimension($dimension);
-
-            return call_user_func([$this->placeholder, 'getImage'], $width, $height);
-        }
-
-        return null;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function getValue($event)
-    {
-        /** @var ActiveRecord $owner */
-        $owner = $this->owner;
-
-        if ($this->saving) {
-            return $owner->{$this->imageAttribute};
-        }
-
-        /** @var Source $source */
-        $source = null;
-
-        if (is_string($this->source) && strlen($this->source)) {
-            $source = Base64Source::create($this->source);
-        } elseif ($this->source instanceof UploadedFile) {
-            $source = UploadedFileSource::create($this->source);
-        } elseif ($instance = UploadedFile::getInstance($owner, $this->getSourceAttribute())) {
-            $source = ModelSource::create($owner, $this->getSourceAttribute());
-        }
-
-        if (!$source) {
-            return $owner->{$this->imageAttribute};
-        }
-
-        /** @var UploadedImage $uploaded */
-        $uploaded = new UploadedImage([
-            'source' => $source,
-            'resize' => $this->resize
-        ]);
-
-        if ($this->resize) {
-            $uploaded->resize($this->resize, $this->crop);
-        }
-
-        $writer = Yii::createObject($this->writer);
-
-        $writer = call_user_func([$writer, 'useActiveRecord'], $owner, $this->imageAttribute);
-        $path = $uploaded->save($writer);
-
-        if (!$this->saving) {
-            (new Thumbnailer(['imagePath' => $path]))->clear();
-        }
-
-        return $path;
+        /** @noinspection PhpUndefinedMethodInspection */
+        return $this->descriptors[$attribute]->url($this->owner, $utm);
     }
 }
