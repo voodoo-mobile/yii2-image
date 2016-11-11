@@ -176,7 +176,7 @@ class ImageBehavior extends AttributeBehavior
      * @param bool $utm
      * @return mixed|null|string URI of the image
      */
-    public function url($attribute, $utm = false)
+    public function url($attribute, $utm = true)
     {
         /** @noinspection PhpUndefinedMethodInspection */
         return $this->descriptors[$attribute]->url($this->owner, $utm);
