@@ -15,7 +15,6 @@ use yii\db\BaseActiveRecord;
  * @property string $sourceAttribute
  *          Behavior for manipulating images
  *          public function behaviors() {
- *
  *          }
  */
 class ImageBehavior extends AttributeBehavior
@@ -58,7 +57,7 @@ class ImageBehavior extends AttributeBehavior
                 $this->descriptors[$attribute] = Yii::createObject($params + [
                         'class'           => '\vr\image\ImageAttributeDescriptor',
                         'attribute'       => $attribute,
-                        'sourceAttribute' => $attribute . $this->suffix
+                        'sourceAttribute' => $attribute . $this->suffix,
                     ]
                 );
             }
@@ -115,7 +114,24 @@ class ImageBehavior extends AttributeBehavior
     }
 
     /**
+     * @inheritdoc
+     */
+    public function canSetProperty($name, $checkVars = true)
+    {
+        return parent::canSetProperty($name, $checkVars) || $this->isSourceAttribute($name);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function canGetProperty($name, $checkVars = true)
+    {
+        return parent::canGetProperty($name, $checkVars) || $this->isSourceAttribute($name);
+    }
+
+    /**
      * @param $name
+     *
      * @return int|null|string
      */
     private function getBaseAttribute($name)
@@ -132,25 +148,9 @@ class ImageBehavior extends AttributeBehavior
     /**
      * @inheritdoc
      */
-    public function canSetProperty($name, $checkVars = true)
-    {
-        return parent::canSetProperty($name, $checkVars) || $this->isSourceAttribute($name);
-    }
-
-    /**
-     * @inheritdoc
-     */
     private function isSourceAttribute($name)
     {
         return $this->getBaseAttribute($name) != null;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function canGetProperty($name, $checkVars = true)
-    {
-        return parent::canGetProperty($name, $checkVars) || $this->isSourceAttribute($name);
     }
 
     /**
@@ -173,12 +173,11 @@ class ImageBehavior extends AttributeBehavior
      *
      * @param $attribute
      *
-     * @param bool $utm
      * @return mixed|null|string URI of the image
      */
-    public function url($attribute, $utm = true)
+    public function url($attribute)
     {
         /** @noinspection PhpUndefinedMethodInspection */
-        return $this->descriptors[$attribute]->url($this->owner, $utm);
+        return $this->descriptors[$attribute]->url($this->owner);
     }
 }
