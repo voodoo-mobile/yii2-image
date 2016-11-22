@@ -19,6 +19,8 @@ use yii\imagine\Image;
  */
 class UploadedImage extends UploadedFile
 {
+    private $contentFile;
+
     public function init()
     {
         parent::init();
@@ -29,7 +31,12 @@ class UploadedImage extends UploadedFile
      */
     public function save($writer)
     {
-        return parent::save($writer);
+        $this->initContentFile();
+
+        $result = $writer->save(file_get_contents($this->contentFile));
+        unlink($this->contentFile);
+
+        return $result;
     }
 
     /**
@@ -42,28 +49,28 @@ class UploadedImage extends UploadedFile
      */
     public function resize($dimension, $crop = true)
     {
-        $contentFile = $this->getContentFile();
+        $this->initContentFile();
 
         /** @var ImageInterface $imagine */
-        $imagine = Image::getImagine()->open($contentFile);
+        $imagine = Image::getImagine()->open($this->contentFile);
 
         $this->performResize($imagine, $dimension, $crop);
 
-        $imagine->save($contentFile);
+        $imagine->save($this->contentFile);
 
         return $this;
     }
 
-    private function getContentFile()
+    private function initContentFile()
     {
         if (!$this->source) {
             throw new InvalidParamException('Source must be initialized before calling this method');
         }
 
-        $contentFile = \Yii::getAlias('@runtime/' . tmpfile());
-        file_put_contents($contentFile, $this->source->getContent());
-
-        return $contentFile;
+        if (!$this->contentFile) {
+            $this->contentFile = \Yii::getAlias('@runtime/' . tmpfile());
+            file_put_contents($this->contentFile, $this->source->getContent());
+        }
     }
 
     /**

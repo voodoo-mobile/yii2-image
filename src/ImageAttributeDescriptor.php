@@ -113,8 +113,6 @@ class ImageAttributeDescriptor extends Object
         $writer = call_user_func([$writer, 'useActiveRecord'], $owner, $this->attribute);
         $path = $uploaded->save($writer);
 
-        (new Thumbnailer(['imagePath' => $path]))->clear();
-
         return $path;
     }
 
