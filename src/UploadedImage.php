@@ -7,6 +7,7 @@ use Imagine\Image\BoxInterface;
 use Imagine\Image\ImageInterface;
 use Imagine\Image\Point;
 use vr\upload\UploadedFile;
+use yii\base\InvalidParamException;
 use yii\imagine\Image;
 
 /** @noinspection SpellCheckingInspection */
@@ -14,36 +15,15 @@ use yii\imagine\Image;
 /**
  * Class UploadedImage
  * @package vr\image
- *
  *          Pretty same as [[UploadedFile]] but provides some addtiional methods for managing image files
  */
 class UploadedImage extends UploadedFile
 {
-    /**
-     * @var int[] | null Size of the box that will be used for resizing an image. The image will be reduced or enlarged
-     *      proportionally to fill the box
-     */
-    public $resize;
+    private $contentFile;
 
-    /**
-     * @var bool Identifies if the image need to be cropped by the provided size
-     */
-    public $crop = true;
-
-    /**
-     * Sets up the box for the uploaded image as a boundary
-     *
-     * @param int | int[] $dimension One or two dimensions of the box. In case of integer it will make a square box
-     * @param bool $crop Determines if the image need to be cropped
-     *
-     * @return $this
-     */
-    public function resize($dimension, $crop = true)
+    public function init()
     {
-        $this->resize = $dimension;
-        $this->crop = $crop;
-
-        return $this;
+        parent::init();
     }
 
     /**
@@ -51,38 +31,67 @@ class UploadedImage extends UploadedFile
      */
     public function save($writer)
     {
-        $filename = parent::save($writer);
+        $this->initContentFile();
 
-        if ($this->resize) {
-            /** @var ImageInterface $imagine */
-            $imagine = Image::getImagine()->open($filename);
+        $result = $writer->save(file_get_contents($this->contentFile));
+        unlink($this->contentFile);
 
-            $this->performResize($imagine);
+        return $result;
+    }
 
-            $imagine->save($filename);
+    /**
+     * Sets up the box for the uploaded image as a boundary
+     *
+     * @param int | int[] $dimension One or two dimensions of the box. In case of integer it will make a square box
+     * @param bool        $crop      Determines if the image need to be cropped
+     *
+     * @return $this
+     */
+    public function resize($dimension, $crop = true)
+    {
+        $this->initContentFile();
+
+        /** @var ImageInterface $imagine */
+        $imagine = Image::getImagine()->open($this->contentFile);
+
+        $this->performResize($imagine, $dimension, $crop);
+
+        $imagine->save($this->contentFile);
+
+        return $this;
+    }
+
+    private function initContentFile()
+    {
+        if (!$this->source) {
+            throw new InvalidParamException('Source must be initialized before calling this method');
         }
 
-        return $filename;
+        if (!$this->contentFile) {
+            $this->contentFile = \Yii::getAlias('@runtime/' . tmpfile());
+            file_put_contents($this->contentFile, $this->source->getContent());
+        }
     }
 
     /**
      * Performs resize of the image. Imagine component is used.
      *
      * @param ImageInterface $imagine
+     * @param                $resize
+     * @param bool           $crop
      *
      * @return BoxInterface
-     *
      */
-    private function performResize($imagine)
+    private function performResize($imagine, $resize, $crop = true)
     {
         $box = $imagine->getSize();
 
-        list($width, $height) = Utils::getDimension($this->resize);
+        list($width, $height) = Utils::getDimension($resize);
 
         $box = $box->scale(max($width / $box->getWidth(), $height / $box->getHeight()));
         $imagine->resize($box);
 
-        if ($this->crop) {
+        if ($crop) {
 
             $point = new Point(($box->getWidth() - $width) / 2,
                 ($box->getHeight() - $height) / 2);

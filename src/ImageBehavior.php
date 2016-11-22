@@ -15,7 +15,6 @@ use yii\db\BaseActiveRecord;
  * @property string $sourceAttribute
  *          Behavior for manipulating images
  *          public function behaviors() {
- *
  *          }
  */
 class ImageBehavior extends AttributeBehavior
@@ -24,12 +23,6 @@ class ImageBehavior extends AttributeBehavior
      * @var array[]
      */
     public $imageAttributes = [];
-
-    /**
-     * @var string. Suffix of the variable that is linked to the content. This variable will be used for forms and
-     *      code. For example if the image attribute is image then source attribute will be image_source
-     */
-    public $suffix = '_source';
 
     /**
      * @var bool It is used only for internal process optimization. Please don't pay your attention to it
@@ -55,10 +48,15 @@ class ImageBehavior extends AttributeBehavior
             ];
 
             foreach ($this->imageAttributes as $attribute => $params) {
+
+                if (is_numeric($attribute)) {
+                    $attribute = $params;
+                    $params    = [];
+                }
+
                 $this->descriptors[$attribute] = Yii::createObject($params + [
-                        'class'           => '\vr\image\ImageAttributeDescriptor',
-                        'attribute'       => $attribute,
-                        'sourceAttribute' => $attribute . $this->suffix
+                        'class'     => '\vr\image\ImageAttributeDescriptor',
+                        'attribute' => $attribute,
                     ]
                 );
             }
@@ -95,8 +93,8 @@ class ImageBehavior extends AttributeBehavior
      */
     public function __get($name)
     {
-        if ($attribute = $this->getBaseAttribute($name)) {
-            return $this->descriptors[$attribute]->source;
+        if ($this->isSourceAttribute($name)) {
+            return $this->descriptors[$name]->source;
         }
 
         return $this->owner->__get($name);
@@ -107,26 +105,11 @@ class ImageBehavior extends AttributeBehavior
      */
     public function __set($name, $value)
     {
-        if ($attribute = $this->getBaseAttribute($name)) {
-            $this->descriptors[$attribute]->source = $value;
+        if ($this->isSourceAttribute($name)) {
+            $this->descriptors[$name]->source = $value;
         } else {
             parent::__set($name, $value);
         }
-    }
-
-    /**
-     * @param $name
-     * @return int|null|string
-     */
-    private function getBaseAttribute($name)
-    {
-        foreach ($this->imageAttributes as $attribute => $params) {
-            if ($attribute . $this->suffix == $name) {
-                return $attribute;
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -140,17 +123,17 @@ class ImageBehavior extends AttributeBehavior
     /**
      * @inheritdoc
      */
-    private function isSourceAttribute($name)
+    public function canGetProperty($name, $checkVars = true)
     {
-        return $this->getBaseAttribute($name) != null;
+        return parent::canGetProperty($name, $checkVars) || $this->isSourceAttribute($name);
     }
 
     /**
      * @inheritdoc
      */
-    public function canGetProperty($name, $checkVars = true)
+    private function isSourceAttribute($name)
     {
-        return parent::canGetProperty($name, $checkVars) || $this->isSourceAttribute($name);
+        return array_key_exists($name, $this->imageAttributes);
     }
 
     /**
@@ -173,12 +156,11 @@ class ImageBehavior extends AttributeBehavior
      *
      * @param $attribute
      *
-     * @param bool $utm
      * @return mixed|null|string URI of the image
      */
-    public function url($attribute, $utm = true)
+    public function url($attribute)
     {
         /** @noinspection PhpUndefinedMethodInspection */
-        return $this->descriptors[$attribute]->url($this->owner, $utm);
+        return $this->descriptors[$attribute]->url($this->owner);
     }
 }
