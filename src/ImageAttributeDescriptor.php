@@ -8,7 +8,6 @@
 
 namespace vr\image;
 
-
 use vr\upload\Base64Source;
 use vr\upload\ModelSource;
 use vr\upload\UploadedFileSource;
@@ -29,12 +28,6 @@ class ImageAttributeDescriptor extends Object
      * @var
      */
     public $attribute;
-
-
-    /**
-     * @var
-     */
-    public $sourceAttribute;
 
     /**
      * @var int[] | int | null. Determines if the image needs to be resized when uploading or updating
@@ -90,8 +83,8 @@ class ImageAttributeDescriptor extends Object
             $source = Base64Source::create($this->source);
         } elseif ($this->source instanceof UploadedFile) {
             $source = UploadedFileSource::create($this->source);
-        } elseif ($instance = UploadedFile::getInstance($owner, $this->sourceAttribute)) {
-            $source = ModelSource::create($owner, $this->sourceAttribute);
+        } elseif ($instance = UploadedFile::getInstance($owner, $this->attribute)) {
+            $source = ModelSource::create($owner, $this->attribute);
         }
 
         if (!$source) {
@@ -101,7 +94,6 @@ class ImageAttributeDescriptor extends Object
         /** @var UploadedImage $uploaded */
         $uploaded = new UploadedImage([
             'source' => $source,
-            'resize' => $this->resize
         ]);
 
         if ($this->resize) {
@@ -111,14 +103,15 @@ class ImageAttributeDescriptor extends Object
         $writer = Yii::createObject($this->writer);
 
         $writer = call_user_func([$writer, 'useActiveRecord'], $owner, $this->attribute);
-        $path = $uploaded->save($writer);
+        $path   = $uploaded->save($writer);
 
         return $path;
     }
 
     /**
      * @param BaseActiveRecord $owner
-     * @param bool $utm
+     * @param bool             $utm
+     *
      * @return mixed
      */
     public function url($owner, $utm = false)
@@ -131,7 +124,7 @@ class ImageAttributeDescriptor extends Object
 
         if ($value) {
 
-            $baseUrl = trim($this->baseUrl, '/');
+            $baseUrl  = trim($this->baseUrl, '/');
             $template = "{$baseUrl}/{$value}";
 
             if ($utm) {
@@ -152,9 +145,10 @@ class ImageAttributeDescriptor extends Object
 
     /**
      * @param BaseActiveRecord $owner
-     * @param $attribute
-     * @param $dimension
-     * @param bool $absoluteUrl
+     * @param                  $attribute
+     * @param                  $dimension
+     * @param bool             $absoluteUrl
+     *
      * @return mixed|null|string
      */
     public function thumbnail($owner, $attribute, $dimension, $absoluteUrl = true)
