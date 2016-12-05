@@ -137,6 +137,14 @@ class ImageBehavior extends AttributeBehavior
     }
 
     /**
+     * @param $name
+     * @param $value
+     */
+    public function upload($name, $value) {
+        $this->descriptors[$name]->source = $value;
+    }
+
+    /**
      * Returns a thumbnail for the image. It will create it the thumbnail is missing or reuse existing otherwise
      *
      * @param      $attribute
