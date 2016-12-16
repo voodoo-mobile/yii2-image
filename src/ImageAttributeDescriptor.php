@@ -103,14 +103,14 @@ class ImageAttributeDescriptor extends Object
         $writer = Yii::createObject($this->writer);
 
         $writer = call_user_func([$writer, 'useActiveRecord'], $owner, $this->attribute);
-        $path   = $uploaded->save($writer);
+        $path = $uploaded->save($writer);
 
         return $path;
     }
 
     /**
      * @param BaseActiveRecord $owner
-     * @param bool             $utm
+     * @param bool $utm
      *
      * @return mixed
      */
@@ -123,8 +123,9 @@ class ImageAttributeDescriptor extends Object
         }
 
         if ($value) {
+            $value = urlencode($value);
 
-            $baseUrl  = trim($this->baseUrl, '/');
+            $baseUrl = trim($this->baseUrl, '/');
             $template = "{$baseUrl}/{$value}";
 
             if ($utm) {
@@ -147,7 +148,7 @@ class ImageAttributeDescriptor extends Object
      * @param BaseActiveRecord $owner
      * @param                  $attribute
      * @param                  $dimension
-     * @param bool             $absoluteUrl
+     * @param bool $absoluteUrl
      *
      * @return mixed|null|string
      */
