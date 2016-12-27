@@ -123,8 +123,6 @@ class ImageAttributeDescriptor extends Object
         }
 
         if ($value) {
-            $value = urlencode($value);
-
             $baseUrl = trim($this->baseUrl, '/');
             $template = "{$baseUrl}/{$value}";
 
