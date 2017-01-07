@@ -27,6 +27,8 @@ class Mediator extends Object
      */
     public $filename;
 
+    public $unlinkOnDestruct = false;
+
     /**
      * @return string
      */
@@ -51,10 +53,12 @@ class Mediator extends Object
      */
     function __destruct()
     {
-        try {
-            unlink($this->filename);
-        } catch (\Exception $exception) {
+        if ($this->unlinkOnDestruct) {
+            try {
+                unlink($this->filename);
+            } catch (\Exception $exception) {
 
+            }
         }
     }
 }

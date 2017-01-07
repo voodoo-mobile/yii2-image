@@ -17,11 +17,13 @@ trait ActiveImageTrait
 
     /**
      * @param $attribute
+     * @param null $dimension
+     * @param bool $utm
      * @return mixed|null|string
      */
-    public function url($attribute)
+    public function url($attribute, $dimension = null, $utm = false)
     {
-        return $this->getBehaviour()->url($attribute);
+        return $this->getBehaviour()->url($attribute, $dimension, $utm);
     }
 
     /**

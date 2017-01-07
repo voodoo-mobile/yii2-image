@@ -10,10 +10,12 @@ namespace vr\image;
 
 
 use vr\image\filters\ResizeFilter;
+use vr\image\placeholders\Placeholder;
 use yii\base\Object;
 
 /**
  * Class ImageDescriptor
+ *
  * @package vr\image
  */
 class ImageDescriptor extends Object
@@ -43,10 +45,29 @@ class ImageDescriptor extends Object
      */
     public $basedOn = null;
 
+    public function getPlaceholderUrl($dimension = null)
+    {
+        /** @var Placeholder $placeholder */
+        $placeholder = \Yii::createObject($this->placeholder);
+
+        $width = $height = ImageBehavior::DEFAULT_IMAGE_DIMENSION;
+
+        if (!$dimension) {
+            /** @var ResizeFilter $filter */
+            $filter = $this->findResizeFilter();
+
+            if ($filter) {
+                list($width, $height) = Utils::parseDimension($filter->dimension);
+            }
+        }
+
+        return $placeholder->getImage($width, $height);
+    }
+
     /**
      * @return null|object
      */
-    public function findResizeFilter()
+    private function findResizeFilter()
     {
         foreach ($this->filters as $filter) {
             $instance = \Yii::createObject($filter);

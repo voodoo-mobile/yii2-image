@@ -97,7 +97,7 @@ class FileSystemDataConnector extends DataConnector
     {
         $url = Url::to(\Yii::getAlias($this->uploadUrl)
             . '/' . $this->category
-            . '/' . $filename);
+            . '/' . $filename, true);
 
         if ($utm) {
             $url .= '?utm=' . uniqid();
@@ -131,5 +131,31 @@ class FileSystemDataConnector extends DataConnector
         };
 
         return $basename;
+    }
+
+    /**
+     * @param $source
+     * @param $destination
+     * @return mixed
+     */
+    public function copy($source, $destination)
+    {
+        $source = $this->locate($source);
+
+        if (file_exists($source) && !copy($source, $this->locate($destination))) {
+            $this->lastError = ArrayHelper::getValue(error_get_last(), 'message');
+            return null;
+        };
+
+        return $destination;
+    }
+
+    /**
+     * @param $filename
+     * @return bool
+     */
+    public function exists($filename)
+    {
+        return file_exists($this->locate($filename));
     }
 }

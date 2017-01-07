@@ -12,11 +12,12 @@ namespace vr\image;
 use vr\image\connectors\DataConnector;
 use vr\image\filters\Filter;
 use vr\image\filters\ResizeFilter;
-use vr\image\placeholders\Placeholder;
 use vr\image\sources\ImageSource;
+use vr\image\sources\UrlSource;
 use yii\base\Behavior;
 use yii\db\ActiveRecord;
 use yii\db\BaseActiveRecord;
+use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
 
 /**
@@ -114,32 +115,28 @@ class ImageBehavior extends Behavior
      *
      * @param $attribute
      *
+     * @param $dimension
      * @param bool $utm
      * @return mixed|null|string URI of the image
      */
-    public function url($attribute, $utm = true)
+    public function url($attribute, $dimension = null, $utm = true)
     {
         /** @var ImageDescriptor $descriptor */
         $descriptor = $this->getDescriptor($attribute);
 
+        /** @var DataConnector $connector */
+        $connector = $this->createConnector($descriptor);
+
         $filename = $this->getActiveRecord()->getAttribute($attribute);
-        $url = $this->createConnector($descriptor)->url($filename, $utm);
+
+        if (!empty($dimension) && $connector->exists($filename)) {
+            $filename = $this->createThumbnail($connector, $filename, $dimension);
+        }
+
+        $url = $connector->url($filename, $utm);
 
         if (empty($url) && $descriptor->placeholder) {
-
-            /** @var Placeholder $placeholder */
-            $placeholder = \Yii::createObject($descriptor->placeholder);
-
-            /** @var ResizeFilter $filter */
-            $filter = $descriptor->findResizeFilter();
-
-            $width = $height = self::DEFAULT_IMAGE_DIMENSION;
-
-            if ($filter) {
-                list($width, $height) = $filter->getDimensions($filter->dimension);
-            }
-
-            return $placeholder->getImage($width, $height);
+            $url = $descriptor->getPlaceholderUrl($dimension);
         }
 
         return $url;
@@ -155,14 +152,6 @@ class ImageBehavior extends Behavior
     }
 
     /**
-     * @return ActiveRecord
-     */
-    private function getActiveRecord()
-    {
-        return $this->owner;
-    }
-
-    /**
      * @param $descriptor
      * @return object
      */
@@ -171,6 +160,50 @@ class ImageBehavior extends Behavior
         return \Yii::createObject($descriptor->connector + [
                 'category' => Inflector::slug((new \ReflectionClass($this->getActiveRecord()))->getShortName())
             ]);
+    }
+
+    /**
+     * @return ActiveRecord
+     */
+    private function getActiveRecord()
+    {
+        return $this->owner;
+    }
+
+    /**
+     * @param DataConnector $connector
+     * @param $filename
+     * @param $dimension
+     * @return string
+     */
+    private function createThumbnail($connector, $filename, $dimension)
+    {
+        $thumbnail = $this->getThumbnailFilename($filename, $dimension);
+
+        if (!$connector->exists($thumbnail)) {
+            $source = new UrlSource([
+                'url' => $connector->url($filename)
+            ]);
+
+            $mediator = $source->createMediator();
+            (new ResizeFilter([
+                'dimension' => $dimension
+            ]))->apply($mediator);
+
+            $connector->upload($mediator, $thumbnail);
+        }
+
+        return $thumbnail;
+    }
+
+    private function getThumbnailFilename($filename, $dimension)
+    {
+        $info = pathinfo($filename);
+
+        list($width, $height) = Utils::parseDimension($dimension);
+
+        return ArrayHelper::getValue($info, 'filename') . "-{$width}x{$height}." .
+            ArrayHelper::getValue($info, 'extension');
     }
 
     /**

@@ -5,6 +5,7 @@ namespace vr\image\filters;
 use Imagine\Image\Box;
 use Imagine\Image\ImageInterface;
 use Imagine\Image\Point;
+use vr\image\Utils;
 use yii\imagine\Image;
 
 /**
@@ -49,13 +50,12 @@ class ResizeFilter extends Filter
     {
         $box = $imagine->getSize();
 
-        list($width, $height) = $this->getDimensions($resize);
+        list($width, $height) = Utils::parseDimension($resize);
 
         $box = $box->scale(max($width / $box->getWidth(), $height / $box->getHeight()));
         $imagine->resize($box);
 
         if ($crop) {
-
             $point = new Point(($box->getWidth() - $width) / 2,
                 ($box->getHeight() - $height) / 2);
 

@@ -53,6 +53,26 @@ abstract class DataConnector extends Object
     abstract public function drop($filename);
 
     /**
+     * @param $filename
+     * @return mixed
+     */
+    abstract public function exists($filename);
+
+    /**
+     * @param $source
+     * @param $destination
+     * @return mixed
+     */
+    abstract public function copy($source, $destination);
+
+    /**
+     * @param $filename
+     * @param bool $utm
+     * @return mixed
+     */
+    abstract public function url($filename, $utm = false);
+
+    /**
      * @return string
      */
     public function getLastError()
