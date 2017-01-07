@@ -1,14 +1,14 @@
 <?php
 
-namespace vr\image\placeholders;
+namespace vr\image\placeholders\Placeholders;
 
-use vr\image\Placeholder;
+use vr\image\placeholders\Placeholder;
 
 /** @noinspection SpellCheckingInspection */
 
 /**
  * Class LoremPixel
- * @package vr\image\placeholders
+ * @package vr\image\placeholders\Placeholders
  *
  *          Default implementation of Placeholder using Lorem Pixel service for generating placeholders
  */

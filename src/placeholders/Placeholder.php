@@ -1,5 +1,6 @@
 <?php
-namespace vr\image;
+
+namespace vr\image\placeholders;
 
 use yii\base\Component;
 

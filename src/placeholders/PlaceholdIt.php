@@ -1,12 +1,12 @@
 <?php
 
-namespace vr\image\placeholders;
+namespace vr\image\placeholders\Placeholders;
 
-use vr\image\Placeholder;
+use vr\image\placeholders\Placeholder;
 
 /**
  * Class PlaceholdIt
- * @package vr\image\placeholders
+ * @package vr\image\placeholders\Placeholders
  *          Default implementation of Placeholder using https://placehold.it service for generating placeholders
  */
 class PlaceholdIt extends Placeholder

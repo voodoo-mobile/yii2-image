@@ -1,11 +1,11 @@
 <?php
-namespace vr\image\placeholders;
+namespace vr\image\placeholders\Placeholders;
 
-use vr\image\Placeholder;
+use vr\image\placeholders\Placeholder;
 
 /**
  * Class UrlPlaceholder
- * @package vr\image\placeholders
+ * @package vr\image\placeholders\Placeholders
  */
 class UrlPlaceholder extends Placeholder
 {

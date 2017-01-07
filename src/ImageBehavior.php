@@ -1,162 +1,112 @@
 <?php
+/**
+ * Created by PhpStorm.
+ * User: Alex
+ * Date: 07/01/2017
+ * Time: 01:47
+ */
+
 namespace vr\image;
 
-use Yii;
-use yii\base\Exception;
-use yii\behaviors\AttributeBehavior;
+
+use vr\image\connectors\DataConnector;
+use vr\image\filters\Filter;
+use vr\image\filters\ResizeFilter;
+use vr\image\placeholders\Placeholder;
+use vr\image\sources\ImageSource;
+use yii\base\Behavior;
 use yii\db\ActiveRecord;
 use yii\db\BaseActiveRecord;
-
-/** @noinspection SpellCheckingInspection */
+use yii\helpers\Inflector;
 
 /**
  * Class ImageBehavior
  * @package vr\image
- * @property string $sourceAttribute
- *          Behavior for manipulating images
- *          public function behaviors() {
- *          }
+ *
+ *
+ * Usage: Add this to your model class
+ *
+ *
+ *  public function behaviors()
+ *  {
+ *      return [
+ *          [
+ *              'class' => ImageBehavior::className(),
+ *              'imageAttributes' => [
+ *                  'image' => [
+ *                      'basedOn' => 'title',
+ *                      'connector' => [
+ *                          'class' => FileSystemDataConnector::className(),
+ *                      ],
+ *                      'placeholder' => [
+ *                          'class' => PlaceBear::className()
+ *                      ],
+ *                      'filters' => [
+ *                          'resize' => [
+ *                              'class' => ResizeFilter::className(),
+ *                              'dimension' => [100, 200]
+ *                          ],
+ *                      ]
+ *                  ]
+ *              ],
+ *          ],
+ *      ];
+ *  }
+ *
+ *  Don't forget to add ActiveImageTrait to your class to define missing functions
+ *
  */
-class ImageBehavior extends AttributeBehavior
+class ImageBehavior extends Behavior
 {
+    const DEFAULT_IMAGE_DIMENSION = 320;
     /**
-     * @var array[]
+     * @var
      */
-    public $imageAttributes = [];
+    public $imageAttributes;
+    /**
+     * @var
+     */
+    public $descriptors;
+    /**
+     * @var bool
+     */
+    public $skipUpdateOnClean = !YII_DEBUG;
 
     /**
-     * @var bool It is used only for internal process optimization. Please don't pay your attention to it
-     */
-    private $saving = false;
-
-    /**
-     * @var null
-     */
-    private $descriptors = null;
-
-    /**
-     * @inheritdoc
+     *
      */
     public function init()
     {
         parent::init();
 
-        if (empty($this->attributes)) {
-            $this->attributes = [
-                BaseActiveRecord::EVENT_AFTER_INSERT => $this->imageAttributes,
-                BaseActiveRecord::EVENT_AFTER_UPDATE => $this->imageAttributes,
-            ];
-
-            foreach ($this->imageAttributes as $attribute => $params) {
-
-                if (is_numeric($attribute)) {
-                    $attribute = $params;
-                    $params    = [];
-                }
-
-                $this->descriptors[$attribute] = Yii::createObject($params + [
-                        'class'     => '\vr\image\ImageAttributeDescriptor',
-                        'attribute' => $attribute,
-                    ]
-                );
-            }
+        if (!is_array($this->imageAttributes)) {
+            $this->imageAttributes = [$this->imageAttributes];
         }
-    }
 
-    /**
-     * @inheritdoc
-     */
-    public function evaluateAttributes($event)
-    {
-        if (!$this->saving) {
+        foreach ($this->imageAttributes as $attribute => $params) {
 
-            /** @var ActiveRecord $owner */
-            $owner = $this->owner;
-
-            /** @var ImageAttributeDescriptor $descriptor */
-            foreach ($this->descriptors as $descriptor) {
-                $owner->{$descriptor->attribute} = $descriptor->getValue($owner);
+            if (is_numeric($attribute)) {
+                $attribute = $params;
+                $params = [];
             }
 
-            $this->saving = true;
-
-            if (!$owner->save(false)) {
-                throw new Exception('Cannot save model because of: ' . var_export($owner->errors));
-            }
-
-            $this->saving = false;
+            $this->descriptors[$attribute] = \Yii::createObject($params + [
+                    'class' => ImageDescriptor::className(),
+                    'attribute' => $attribute,
+                ]
+            );
         }
     }
 
     /**
      * @inheritdoc
      */
-    public function __get($name)
+    public function events()
     {
-        if ($this->isSourceAttribute($name)) {
-            return $this->descriptors[$name]->source;
-        }
-
-        return $this->owner->__get($name);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function __set($name, $value)
-    {
-        if ($this->isSourceAttribute($name)) {
-            $this->descriptors[$name]->source = $value;
-        } else {
-            parent::__set($name, $value);
-        }
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function canSetProperty($name, $checkVars = true)
-    {
-        return parent::canSetProperty($name, $checkVars) || $this->isSourceAttribute($name);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function canGetProperty($name, $checkVars = true)
-    {
-        return parent::canGetProperty($name, $checkVars) || $this->isSourceAttribute($name);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    private function isSourceAttribute($name)
-    {
-        return array_key_exists($name, $this->imageAttributes);
-    }
-
-    /**
-     * @param $name
-     * @param $value
-     */
-    public function upload($name, $value) {
-        $this->descriptors[$name]->source = $value;
-    }
-
-    /**
-     * Returns a thumbnail for the image. It will create it the thumbnail is missing or reuse existing otherwise
-     *
-     * @param      $attribute
-     * @param      $dimension . Desired dimension of the thumbnail. For example 120 or [120, 120]
-     * @param bool $absoluteUrl
-     *
-     * @return mixed|null|string
-     */
-    public function thumbnail($attribute, $dimension, $absoluteUrl = true)
-    {
-        /** @noinspection PhpUndefinedMethodInspection */
-        return $this->descriptors[$attribute]->thumbnail($this->owner, $dimension, $absoluteUrl);
+        return [
+            BaseActiveRecord::EVENT_BEFORE_UPDATE => 'rename',
+            BaseActiveRecord::EVENT_AFTER_DELETE => 'delete',
+        ];
     }
 
     /**
@@ -164,11 +114,150 @@ class ImageBehavior extends AttributeBehavior
      *
      * @param $attribute
      *
+     * @param bool $utm
      * @return mixed|null|string URI of the image
      */
-    public function url($attribute)
+    public function url($attribute, $utm = true)
     {
-        /** @noinspection PhpUndefinedMethodInspection */
-        return $this->descriptors[$attribute]->url($this->owner);
+        /** @var ImageDescriptor $descriptor */
+        $descriptor = $this->getDescriptor($attribute);
+
+        $filename = $this->getActiveRecord()->getAttribute($attribute);
+        $url = $this->createConnector($descriptor)->url($filename, $utm);
+
+        if (empty($url) && $descriptor->placeholder) {
+
+            /** @var Placeholder $placeholder */
+            $placeholder = \Yii::createObject($descriptor->placeholder);
+
+            /** @var ResizeFilter $filter */
+            $filter = $descriptor->findResizeFilter();
+
+            $width = $height = self::DEFAULT_IMAGE_DIMENSION;
+
+            if ($filter) {
+                list($width, $height) = $filter->getDimensions($filter->dimension);
+            }
+
+            return $placeholder->getImage($width, $height);
+        }
+
+        return $url;
+    }
+
+    /**
+     * @param $attribute
+     * @return ImageDescriptor
+     */
+    protected function getDescriptor($attribute)
+    {
+        return $this->descriptors[$attribute];
+    }
+
+    /**
+     * @return ActiveRecord
+     */
+    private function getActiveRecord()
+    {
+        return $this->owner;
+    }
+
+    /**
+     * @param $descriptor
+     * @return object
+     */
+    private function createConnector($descriptor)
+    {
+        return \Yii::createObject($descriptor->connector + [
+                'category' => Inflector::slug((new \ReflectionClass($this->getActiveRecord()))->getShortName())
+            ]);
+    }
+
+    /**
+     * @param string $attribute
+     * @param ImageSource $source
+     * @return bool
+     */
+    public function upload($attribute, $source)
+    {
+        if (!$source || !$source->validate()) {
+            return false;
+        }
+
+        /** @var Mediator $mediator */
+        $mediator = $source->createMediator();
+
+        /** @var Filter[] $filters */
+        $descriptor = $this->getDescriptor($attribute);
+
+        foreach ($descriptor->filters as $name => $filter) {
+            \Yii::createObject($filter)->apply($mediator);
+        }
+
+        /** @var DataConnector $connector */
+        $connector = $this->createConnector($descriptor);
+
+        $filename = $this->getFilename($descriptor, $mediator->extension);
+
+        if (($existing = $this->getActiveRecord()->getAttribute($attribute))) {
+            $connector->drop($existing);
+        }
+
+        if (!$connector->upload($mediator, $filename)) {
+            $this->getActiveRecord()->addError($descriptor->attribute, $connector->lastError);
+            return false;
+        }
+
+        $this->owner->$attribute = $filename;
+
+        return true;
+    }
+
+    /**
+     * @param ImageDescriptor $descriptor
+     * @param $extension
+     * @return string
+     */
+    private function getFilename($descriptor, $extension)
+    {
+        $baseFilename = $descriptor->basedOn ? Inflector::slug($this->getActiveRecord()->{$descriptor->basedOn}) : md5(uniqid());
+
+        return "{$baseFilename}-{$descriptor->attribute}" . ($extension ? '.' . $extension : null);
+    }
+
+    /**
+     *
+     */
+    public function rename()
+    {
+        /** @var ImageDescriptor $descriptor */
+        foreach ($this->descriptors as $descriptor) {
+
+            /** @var DataConnector $connector */
+            $connector = $this->createConnector($descriptor);
+
+            $filename = $this->getFilename($descriptor, null);
+
+            if ($filename = $connector->rename($this->getActiveRecord()->getAttribute($descriptor->attribute), $filename)) {
+                $this->getActiveRecord()->setAttribute($descriptor->attribute, $filename);
+            };
+        }
+    }
+
+    /**
+     *
+     */
+    public function delete()
+    {
+        /** @var ImageDescriptor $descriptor */
+        foreach ($this->descriptors as $descriptor) {
+
+            /** @var DataConnector $connector */
+            $connector = $this->createConnector($descriptor);
+
+            if ($connector->drop($this->getActiveRecord()->getAttribute($descriptor->attribute))) {
+                $this->getActiveRecord()->setAttribute($descriptor->attribute, null);
+            };
+        }
     }
 }
