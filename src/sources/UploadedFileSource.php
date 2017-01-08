@@ -27,7 +27,8 @@ class UploadedFileSource extends ImageSource
     public function createMediator()
     {
         return new Mediator([
-            'filename' => $this->uploaded->tempName
+            'filename' => $this->uploaded->tempName,
+            'unlinkOnDestruct' => false,
         ]);
     }
 }

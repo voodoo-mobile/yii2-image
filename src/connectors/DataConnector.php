@@ -8,6 +8,7 @@
 
 namespace vr\image\connectors;
 
+use vr\image\Mediator;
 use yii\base\Object;
 
 /**
@@ -18,57 +19,56 @@ abstract class DataConnector extends Object
     /**
      * @var
      */
-    public $category;
+    public $folder;
+
     /**
      * @var
      */
     protected $lastError;
 
     /**
-     * @param $mediator
-     * @param $filename
+     * @param Mediator $mediator
+     * @param string $filename
      *
-     * @return mixed
+     * @return bool
      */
     abstract public function upload($mediator, $filename);
 
     /**
-     * @param $filename
-     * @param $with
-     * @param bool $keepExtension
-     * @return mixed
+     * @param string $source
+     * @param string $destination
+     * @return bool
      */
-    abstract public function rename($filename, $with, $keepExtension = true);
+    abstract public function rename($source, $destination);
 
     /**
-     * @param $filename
-     * @return mixed
+     * @param string $filename
+     * @return string
      */
     abstract public function locate($filename);
 
     /**
-     * @param $filename
-     * @return mixed
+     * @param string $filename
+     * @return bool
      */
     abstract public function drop($filename);
 
     /**
-     * @param $filename
-     * @return mixed
+     * @param string $filename
+     * @return bool
+     */
+    abstract public function cleanUp($filename);
+
+    /**
+     * @param string $filename
+     * @return bool
      */
     abstract public function exists($filename);
 
     /**
-     * @param $source
-     * @param $destination
-     * @return mixed
-     */
-    abstract public function copy($source, $destination);
-
-    /**
-     * @param $filename
+     * @param string $filename
      * @param bool $utm
-     * @return mixed
+     * @return string
      */
     abstract public function url($filename, $utm = false);
 

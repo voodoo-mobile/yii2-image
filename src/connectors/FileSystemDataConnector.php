@@ -67,7 +67,7 @@ class FileSystemDataConnector extends DataConnector
             }
         }
 
-        return true;
+        return $this->cleanUp($filename);
     }
 
     /**
@@ -76,7 +76,7 @@ class FileSystemDataConnector extends DataConnector
      */
     public function locate($filename)
     {
-        $directory = \Yii::getAlias($this->uploadPath) . '/' . $this->category;
+        $directory = \Yii::getAlias($this->uploadPath) . '/' . $this->folder;
 
         if (!file_exists($directory) && !FileHelper::createDirectory($directory)) {
             $this->lastError = ArrayHelper::getValue(error_get_last(), 'message');
@@ -87,6 +87,26 @@ class FileSystemDataConnector extends DataConnector
         return $directory . '/' . $filename;
     }
 
+    /**
+     * @param string $filename
+     * @return bool
+     */
+    public function cleanUp($filename)
+    {
+        $directory = \Yii::getAlias($this->uploadPath) . '/' . $this->folder;
+        $mask = pathinfo($filename, PATHINFO_FILENAME);
+
+        foreach (FileHelper::findFiles($directory, ['only' => ["{$mask}-*x*"]]) as $file) {
+            try {
+                unlink($file);
+            } catch (\Exception $exception) {
+                $this->lastError = $exception->getMessage();
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     /**
      * @param $filename
@@ -95,8 +115,12 @@ class FileSystemDataConnector extends DataConnector
      */
     public function url($filename, $utm = false)
     {
+        if (!$filename) {
+            return null;
+        }
+
         $url = Url::to(\Yii::getAlias($this->uploadUrl)
-            . '/' . $this->category
+            . '/' . $this->folder
             . '/' . $filename, true);
 
         if ($utm) {
@@ -108,54 +132,29 @@ class FileSystemDataConnector extends DataConnector
 
     /**
      * @param $filename
-     * @param $with
-     * @param bool $keepExtension
-     * @return mixed
-     */
-    public function rename($filename, $with, $keepExtension = true)
-    {
-        $absolute = $this->locate($filename);
-
-        $info = pathinfo($absolute);
-        $basename = $with;
-
-        if ($keepExtension) {
-            $basename .= '.' . ArrayHelper::getValue($info, 'extension');
-        }
-
-        $path = ArrayHelper::getValue($info, 'dirname') . '/' . $basename;
-
-        if (file_exists($absolute) && !rename($absolute, $path)) {
-            $this->lastError = ArrayHelper::getValue(error_get_last(), 'message');
-            return null;
-        };
-
-        return $basename;
-    }
-
-    /**
-     * @param $source
-     * @param $destination
-     * @return mixed
-     */
-    public function copy($source, $destination)
-    {
-        $source = $this->locate($source);
-
-        if (file_exists($source) && !copy($source, $this->locate($destination))) {
-            $this->lastError = ArrayHelper::getValue(error_get_last(), 'message');
-            return null;
-        };
-
-        return $destination;
-    }
-
-    /**
-     * @param $filename
      * @return bool
      */
     public function exists($filename)
     {
         return file_exists($this->locate($filename));
+    }
+
+    /**
+     * @param string $source
+     * @param string $destination
+     * @return bool
+     */
+    public function rename($source, $destination)
+    {
+        $source = $this->locate($source);
+        $destination = $this->locate($destination);
+
+        if (file_exists($source) && !rename($source, $destination)) {
+            $this->lastError = ArrayHelper::getValue(error_get_last(), 'message');
+            return false;
+        };
+
+
+        return $this->cleanUp($source);
     }
 }

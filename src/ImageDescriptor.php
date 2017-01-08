@@ -52,7 +52,9 @@ class ImageDescriptor extends Object
 
         $width = $height = ImageBehavior::DEFAULT_IMAGE_DIMENSION;
 
-        if (!$dimension) {
+        if ($dimension) {
+            list($width, $height) = Utils::parseDimension($dimension);
+        } else {
             /** @var ResizeFilter $filter */
             $filter = $this->findResizeFilter();
 

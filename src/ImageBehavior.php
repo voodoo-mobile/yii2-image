@@ -59,6 +59,9 @@ use yii\helpers\Inflector;
  */
 class ImageBehavior extends Behavior
 {
+    /**
+     *
+     */
     const DEFAULT_IMAGE_DIMENSION = 320;
     /**
      * @var
@@ -105,8 +108,9 @@ class ImageBehavior extends Behavior
     public function events()
     {
         return [
-            BaseActiveRecord::EVENT_BEFORE_UPDATE => 'rename',
-            BaseActiveRecord::EVENT_AFTER_DELETE => 'delete',
+            BaseActiveRecord::EVENT_BEFORE_UPDATE => 'onBeforeUpdate',
+            BaseActiveRecord::EVENT_AFTER_UPDATE => 'onAfterUpdate',
+            BaseActiveRecord::EVENT_AFTER_DELETE => 'onAfterDelete',
         ];
     }
 
@@ -129,7 +133,7 @@ class ImageBehavior extends Behavior
 
         $filename = $this->getActiveRecord()->getAttribute($attribute);
 
-        if (!empty($dimension) && $connector->exists($filename)) {
+        if (!empty($filename) && !empty($dimension) && $connector->exists($filename)) {
             $filename = $this->createThumbnail($connector, $filename, $dimension);
         }
 
@@ -158,8 +162,9 @@ class ImageBehavior extends Behavior
     private function createConnector($descriptor)
     {
         return \Yii::createObject($descriptor->connector + [
-                'category' => Inflector::slug((new \ReflectionClass($this->getActiveRecord()))->getShortName())
-            ]);
+                'folder' => Inflector::slug((new \ReflectionClass($this->getActiveRecord()))->getShortName())
+            ]
+        );
     }
 
     /**
@@ -196,6 +201,11 @@ class ImageBehavior extends Behavior
         return $thumbnail;
     }
 
+    /**
+     * @param $filename
+     * @param $dimension
+     * @return string
+     */
     private function getThumbnailFilename($filename, $dimension)
     {
         $info = pathinfo($filename);
@@ -255,32 +265,47 @@ class ImageBehavior extends Behavior
     {
         $baseFilename = $descriptor->basedOn ? Inflector::slug($this->getActiveRecord()->{$descriptor->basedOn}) : md5(uniqid());
 
+        if (empty($extension)) {
+            $previous = $this->getActiveRecord()->getAttribute($descriptor->attribute);
+            $extension = pathinfo($previous, PATHINFO_EXTENSION);
+        }
+
         return "{$baseFilename}-{$descriptor->attribute}" . ($extension ? '.' . $extension : null);
     }
 
     /**
      *
      */
-    public function rename()
+    public function onBeforeUpdate()
     {
+        $activeRecord = $this->getActiveRecord();
+
         /** @var ImageDescriptor $descriptor */
         foreach ($this->descriptors as $descriptor) {
+            if (!$activeRecord->isAttributeChanged($descriptor->basedOn)) {
+                continue;
+            }
 
-            /** @var DataConnector $connector */
             $connector = $this->createConnector($descriptor);
 
-            $filename = $this->getFilename($descriptor, null);
+            $source = $this->getActiveRecord()->getAttribute($descriptor->attribute);
+            $destination = $this->getFilename($descriptor, null);
 
-            if ($filename = $connector->rename($this->getActiveRecord()->getAttribute($descriptor->attribute), $filename)) {
-                $this->getActiveRecord()->setAttribute($descriptor->attribute, $filename);
-            };
+            $this->getActiveRecord()->setAttribute($descriptor->attribute, $destination);
+
+            $connector->rename($source, $destination);
         }
+    }
+
+    public function onAfterUpdate()
+    {
+
     }
 
     /**
      *
      */
-    public function delete()
+    public function onAfterDelete()
     {
         /** @var ImageDescriptor $descriptor */
         foreach ($this->descriptors as $descriptor) {

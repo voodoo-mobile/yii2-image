@@ -27,7 +27,7 @@ class Mediator extends Object
      */
     public $filename;
 
-    public $unlinkOnDestruct = false;
+    public $unlinkOnDestruct = true;
 
     /**
      * @return string
