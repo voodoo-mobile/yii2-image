@@ -1,7 +1,6 @@
 <?php
-namespace vr\image\placeholders\Placeholders;
 
-use vr\image\placeholders\Placeholder;
+namespace vr\image\placeholders;
 
 /**
  * Class UrlPlaceholder

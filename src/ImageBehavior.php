@@ -12,11 +12,12 @@ namespace vr\image;
 use vr\image\connectors\DataConnector;
 use vr\image\filters\Filter;
 use vr\image\filters\ResizeFilter;
-use vr\image\placeholders\Placeholder;
 use vr\image\sources\ImageSource;
+use vr\image\sources\UrlSource;
 use yii\base\Behavior;
 use yii\db\ActiveRecord;
 use yii\db\BaseActiveRecord;
+use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
 
 /**
@@ -58,6 +59,9 @@ use yii\helpers\Inflector;
  */
 class ImageBehavior extends Behavior
 {
+    /**
+     *
+     */
     const DEFAULT_IMAGE_DIMENSION = 320;
     /**
      * @var
@@ -104,8 +108,9 @@ class ImageBehavior extends Behavior
     public function events()
     {
         return [
-            BaseActiveRecord::EVENT_BEFORE_UPDATE => 'rename',
-            BaseActiveRecord::EVENT_AFTER_DELETE => 'delete',
+            BaseActiveRecord::EVENT_BEFORE_UPDATE => 'onBeforeUpdate',
+            BaseActiveRecord::EVENT_AFTER_UPDATE => 'onAfterUpdate',
+            BaseActiveRecord::EVENT_AFTER_DELETE => 'onAfterDelete',
         ];
     }
 
@@ -114,32 +119,28 @@ class ImageBehavior extends Behavior
      *
      * @param $attribute
      *
+     * @param $dimension
      * @param bool $utm
      * @return mixed|null|string URI of the image
      */
-    public function url($attribute, $utm = true)
+    public function url($attribute, $dimension = null, $utm = true)
     {
         /** @var ImageDescriptor $descriptor */
         $descriptor = $this->getDescriptor($attribute);
 
+        /** @var DataConnector $connector */
+        $connector = $this->createConnector($descriptor);
+
         $filename = $this->getActiveRecord()->getAttribute($attribute);
-        $url = $this->createConnector($descriptor)->url($filename, $utm);
+
+        if (!empty($filename) && !empty($dimension) && $connector->exists($filename)) {
+            $filename = $this->createThumbnail($connector, $filename, $dimension);
+        }
+
+        $url = $connector->url($filename, $utm);
 
         if (empty($url) && $descriptor->placeholder) {
-
-            /** @var Placeholder $placeholder */
-            $placeholder = \Yii::createObject($descriptor->placeholder);
-
-            /** @var ResizeFilter $filter */
-            $filter = $descriptor->findResizeFilter();
-
-            $width = $height = self::DEFAULT_IMAGE_DIMENSION;
-
-            if ($filter) {
-                list($width, $height) = $filter->getDimensions($filter->dimension);
-            }
-
-            return $placeholder->getImage($width, $height);
+            $url = $descriptor->getPlaceholderUrl($dimension);
         }
 
         return $url;
@@ -155,6 +156,18 @@ class ImageBehavior extends Behavior
     }
 
     /**
+     * @param $descriptor
+     * @return object
+     */
+    private function createConnector($descriptor)
+    {
+        return \Yii::createObject($descriptor->connector + [
+                'folder' => Inflector::slug((new \ReflectionClass($this->getActiveRecord()))->getShortName())
+            ]
+        );
+    }
+
+    /**
      * @return ActiveRecord
      */
     private function getActiveRecord()
@@ -163,14 +176,44 @@ class ImageBehavior extends Behavior
     }
 
     /**
-     * @param $descriptor
-     * @return object
+     * @param DataConnector $connector
+     * @param $filename
+     * @param $dimension
+     * @return string
      */
-    private function createConnector($descriptor)
+    private function createThumbnail($connector, $filename, $dimension)
     {
-        return \Yii::createObject($descriptor->connector + [
-                'category' => Inflector::slug((new \ReflectionClass($this->getActiveRecord()))->getShortName())
+        $thumbnail = $this->getThumbnailFilename($filename, $dimension);
+
+        if (!$connector->exists($thumbnail)) {
+            $source = new UrlSource([
+                'url' => $connector->url($filename)
             ]);
+
+            $mediator = $source->createMediator();
+            (new ResizeFilter([
+                'dimension' => $dimension
+            ]))->apply($mediator);
+
+            $connector->upload($mediator, $thumbnail);
+        }
+
+        return $thumbnail;
+    }
+
+    /**
+     * @param $filename
+     * @param $dimension
+     * @return string
+     */
+    private function getThumbnailFilename($filename, $dimension)
+    {
+        $info = pathinfo($filename);
+
+        list($width, $height) = Utils::parseDimension($dimension);
+
+        return ArrayHelper::getValue($info, 'filename') . "-{$width}x{$height}." .
+            ArrayHelper::getValue($info, 'extension');
     }
 
     /**
@@ -222,32 +265,47 @@ class ImageBehavior extends Behavior
     {
         $baseFilename = $descriptor->basedOn ? Inflector::slug($this->getActiveRecord()->{$descriptor->basedOn}) : md5(uniqid());
 
+        if (empty($extension)) {
+            $previous = $this->getActiveRecord()->getAttribute($descriptor->attribute);
+            $extension = pathinfo($previous, PATHINFO_EXTENSION);
+        }
+
         return "{$baseFilename}-{$descriptor->attribute}" . ($extension ? '.' . $extension : null);
     }
 
     /**
      *
      */
-    public function rename()
+    public function onBeforeUpdate()
     {
+        $activeRecord = $this->getActiveRecord();
+
         /** @var ImageDescriptor $descriptor */
         foreach ($this->descriptors as $descriptor) {
+            if (!$activeRecord->isAttributeChanged($descriptor->basedOn)) {
+                continue;
+            }
 
-            /** @var DataConnector $connector */
             $connector = $this->createConnector($descriptor);
 
-            $filename = $this->getFilename($descriptor, null);
+            $source = $this->getActiveRecord()->getAttribute($descriptor->attribute);
+            $destination = $this->getFilename($descriptor, null);
 
-            if ($filename = $connector->rename($this->getActiveRecord()->getAttribute($descriptor->attribute), $filename)) {
-                $this->getActiveRecord()->setAttribute($descriptor->attribute, $filename);
-            };
+            $this->getActiveRecord()->setAttribute($descriptor->attribute, $destination);
+
+            $connector->rename($source, $destination);
         }
+    }
+
+    public function onAfterUpdate()
+    {
+
     }
 
     /**
      *
      */
-    public function delete()
+    public function onAfterDelete()
     {
         /** @var ImageDescriptor $descriptor */
         foreach ($this->descriptors as $descriptor) {
