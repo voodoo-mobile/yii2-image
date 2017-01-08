@@ -27,6 +27,7 @@ use yii\helpers\Inflector;
  *
  * Usage: Add this to your model class
  *
+ *  1. Add this to your behaviours() method
  *
  *  public function behaviors()
  *  {
@@ -54,7 +55,14 @@ use yii\helpers\Inflector;
  *      ];
  *  }
  *
- *  Don't forget to add ActiveImageTrait to your class to define missing functions
+ *  2. Don't forget to add ActiveImageTrait to your class to define missing functions
+ *  3. Add this code to the model where you upload your image
+ *
+ *      if (($instance = UploadedFile::getInstance($this, 'image'))) {
+ *          $product->upload('image', new UploadedFileSource([
+ *              'uploaded' => $instance
+ *          ]));
+ *      }
  *
  */
 class ImageBehavior extends Behavior
