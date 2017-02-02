@@ -9,6 +9,7 @@
 namespace vr\image;
 
 
+use vr\image\connectors\FileSystemDataConnector;
 use vr\image\filters\ResizeFilter;
 use vr\image\placeholders\Placeholder;
 use yii\base\Object;
@@ -35,6 +36,7 @@ class ImageDescriptor extends Object
      */
     public $connector;
 
+
     /**
      * @var
      */
@@ -45,6 +47,22 @@ class ImageDescriptor extends Object
      */
     public $basedOn = null;
 
+    /**
+     *
+     */
+    public function init()
+    {
+        if (!$this->connector) {
+            $this->connector = ['class' => FileSystemDataConnector::className()];
+        }
+
+        parent::init();
+    }
+
+    /**
+     * @param null $dimension
+     * @return mixed
+     */
     public function getPlaceholderUrl($dimension = null)
     {
         /** @var Placeholder $placeholder */
