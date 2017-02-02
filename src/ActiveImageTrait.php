@@ -8,6 +8,8 @@
 
 namespace vr\image;
 
+use vr\image\sources\ImageSource;
+
 /**
  * Class ActiveImageTrait
  * @package vr\image
@@ -16,8 +18,8 @@ trait ActiveImageTrait
 {
 
     /**
-     * @param $attribute
-     * @param null $dimension
+     * @param string $attribute
+     * @param int|int[]|string|null $dimension
      * @param bool $utm
      * @return mixed|null|string
      */
@@ -43,8 +45,8 @@ trait ActiveImageTrait
     }
 
     /**
-     * @param $attribute
-     * @param $source
+     * @param string $attribute
+     * @param ImageSource $source
      * @return bool
      */
     public function upload($attribute, $source)

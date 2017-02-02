@@ -13,6 +13,8 @@ use vr\image\connectors\FileSystemDataConnector;
 use vr\image\filters\ResizeFilter;
 use vr\image\placeholders\Placeholder;
 use yii\base\Object;
+use yii\helpers\ArrayHelper;
+use yii\helpers\Inflector;
 
 /**
  * Class ImageDescriptor
@@ -36,7 +38,6 @@ class ImageDescriptor extends Object
      */
     public $connector;
 
-
     /**
      * @var
      */
@@ -46,6 +47,16 @@ class ImageDescriptor extends Object
      * @var null
      */
     public $basedOn = null;
+
+    /**
+     * @var
+     */
+    public $timestamp;
+
+    /**
+     * @var
+     */
+    public $tag;
 
     /**
      *
@@ -97,5 +108,62 @@ class ImageDescriptor extends Object
         }
 
         return null;
+    }
+
+    /**
+     * @param $model
+     * @return mixed|string
+     */
+    public function getBasename($model)
+    {
+        $basename = crc32(uniqid());
+
+        if ($this->basedOn) {
+            $expression = $this->basedOn;
+
+            if (is_callable($expression)) {
+                $expression = call_user_func($expression, $model);
+            }
+
+            if (is_array($expression)) {
+
+                $values = ArrayHelper::getColumn($expression, function ($item) use ($model) {
+                    return $this->evaluate($model, $item);
+                });
+
+                $basename = implode('-', $values);
+            }
+
+
+            if (is_string($expression)) {
+                $basename = $this->evaluate($model, $expression);
+            }
+        }
+
+        if ($this->timestamp) {
+            $basename .= '-' . (new \DateTime())->format($this->timestamp);
+        }
+
+        if ($this->tag && $this->basedOn) {
+            $basename .= '-' . crc32(uniqid());
+        }
+
+        return $basename;
+    }
+
+    /**
+     * @param $model
+     * @param $expression
+     * @return mixed|string
+     */
+    private function evaluate($model, $expression)
+    {
+        $basename = $model;
+
+        foreach (explode('.', $expression) as $item) {
+            $basename = ArrayHelper::getValue($basename, $item);
+        }
+
+        return Inflector::slug($basename);
     }
 }
