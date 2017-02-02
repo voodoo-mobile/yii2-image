@@ -25,8 +25,9 @@ use yii\helpers\Inflector;
  * @package vr\image
  *
  *
- * Usage: Add this to your model class
+ * Usage:
  *
+ *  1. Add this to your model class
  *
  *  public function behaviors()
  *  {
@@ -54,7 +55,15 @@ use yii\helpers\Inflector;
  *      ];
  *  }
  *
- *  Don't forget to add ActiveImageTrait to your class to define missing functions
+ *  2. Don't forget to add ActiveImageTrait to your class to define missing functions
+ *
+ *  3. Add this code to the model where you upload your image
+ *
+ *      if (($instance = UploadedFile::getInstance($this, 'image'))) {
+ *          $product->upload('image', new UploadedFileSource([
+ *              'uploaded' => $instance
+ *          ]));
+ *      }
  *
  */
 class ImageBehavior extends Behavior
@@ -259,18 +268,21 @@ class ImageBehavior extends Behavior
     /**
      * @param ImageDescriptor $descriptor
      * @param $extension
+     * @param bool $unique
      * @return string
      */
-    private function getFilename($descriptor, $extension)
+    private function getFilename($descriptor, $extension, $unique = false)
     {
-        $baseFilename = $descriptor->basedOn ? Inflector::slug($this->getActiveRecord()->{$descriptor->basedOn}) : md5(uniqid());
+
 
         if (empty($extension)) {
             $previous = $this->getActiveRecord()->getAttribute($descriptor->attribute);
             $extension = pathinfo($previous, PATHINFO_EXTENSION);
         }
 
-        return "{$baseFilename}-{$descriptor->attribute}" . ($extension ? '.' . $extension : null);
+        $basename = $descriptor->getBasename($this->getActiveRecord());
+
+        return "{$basename}-{$descriptor->attribute}" . ($extension ? '.' . $extension : null);
     }
 
     /**
