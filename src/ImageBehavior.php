@@ -301,6 +301,11 @@ class ImageBehavior extends Behavior
             $connector = $this->createConnector($descriptor);
 
             $source = $this->getActiveRecord()->getAttribute($descriptor->attribute);
+
+            if (!$source) {
+                continue;
+            }
+
             $destination = $this->getFilename($descriptor, null);
 
             $this->getActiveRecord()->setAttribute($descriptor->attribute, $destination);
