@@ -67,9 +67,6 @@ class S3DataConnector extends DataConnector
     {
         $this->createBucket();
 
-//        $info = pathinfo($filename);
-//        $filename = ArrayHelper::getValue($info, 'filename') . '-' . uniqid() . '.' . ArrayHelper::getValue($info, 'extension');
-
         $this->client->upload($this->bucket, $this->locate($filename),
             file_get_contents($mediator->filename), 'public-read');
 
@@ -156,6 +153,10 @@ class S3DataConnector extends DataConnector
         ]);
 
         $objects = $result['Contents'];
+
+        if (!is_array($objects)) {
+            return true;
+        }
 
         foreach ($objects as $object) {
             $key = $object['Key'];
