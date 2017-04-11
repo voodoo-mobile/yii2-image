@@ -26,6 +26,9 @@ class Placeholder extends Component
      */
     public $value;
 
+    /** @var bool  */
+    public $onlyNotExist = false;
+
     /**
      * @param $width
      * @param $height
