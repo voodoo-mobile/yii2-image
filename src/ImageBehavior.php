@@ -148,8 +148,6 @@ class ImageBehavior extends Behavior
 
         $url = $connector->url($filename, $utm);
 
-        $url = $connector->url($filename, $utm);
-
         if ($descriptor->placeholder
             && !$descriptor->placeholdOnlyNotExisted()
             && empty($url)) {
