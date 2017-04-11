@@ -96,6 +96,16 @@ class ImageDescriptor extends Object
     }
 
     /**
+     * @return bool
+     */
+    public function placeholdOnlyNotExisted()
+    {
+        /** @var Placeholder $placeholder */
+        $placeholder = \Yii::createObject($this->placeholder);
+        return $placeholder->onlyNotExist;
+    }
+
+    /**
      * @return null|object
      */
     private function findResizeFilter()
