@@ -8,7 +8,6 @@
 
 namespace vr\image\sources;
 
-
 use vr\image\Mediator;
 
 /**
@@ -17,6 +16,8 @@ use vr\image\Mediator;
  */
 class Base64Source extends ImageSource
 {
+    const STOPPER = 'base64,';
+
     /**
      * @var
      */
@@ -34,10 +35,14 @@ class Base64Source extends ImageSource
     {
         $this->filename = tempnam(\Yii::getAlias('@runtime'), 'image-');
 
+        if (($pos = strpos($this->data, self::STOPPER)) !== false) {
+            $this->data = substr($this->data, $pos + strlen(self::STOPPER));
+        }
+
         file_put_contents($this->filename, base64_decode($this->data), FILE_BINARY | LOCK_EX);
 
         return new Mediator([
-            'filename' => $this->filename
+            'filename' => $this->filename,
         ]);
     }
 }
