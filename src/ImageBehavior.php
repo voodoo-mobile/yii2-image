@@ -180,8 +180,10 @@ class ImageBehavior extends Behavior
      */
     private function createConnector($descriptor)
     {
+        $class = (new \ReflectionClass($this->getActiveRecord()))->getShortName();
+
         return \Yii::createObject($descriptor->connector + [
-                'folder' => Inflector::slug((new \ReflectionClass($this->getActiveRecord()))->getShortName())
+                'folder' => Inflector::camel2id($class, '-'),
             ]
         );
     }
