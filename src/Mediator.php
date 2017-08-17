@@ -27,7 +27,15 @@ class Mediator extends Object
      */
     public $filename;
 
+    /**
+     * @var bool
+     */
     public $unlinkOnDestruct = true;
+
+    /**
+     * @var
+     */
+    public $defaultExtension;
 
     /**
      * @return string
@@ -45,7 +53,7 @@ class Mediator extends Object
         $mime = FileHelper::getMimeType($this->filename);
         $extensions = FileHelper::getExtensionsByMimeType($mime);
 
-        return ArrayHelper::getValue($extensions, max(count($extensions) - 1, 0));
+        return ArrayHelper::getValue($extensions, max(count($extensions) - 1, 0), $this->defaultExtension);
     }
 
     /**
