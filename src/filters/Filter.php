@@ -3,7 +3,6 @@
 namespace vr\image\filters;
 
 use yii\base\Object;
-use yii\helpers\ArrayHelper;
 
 /**
  * Created by PhpStorm.
@@ -15,7 +14,8 @@ abstract class Filter extends Object
 {
     /**
      * @param \vr\image\Mediator $mediator
-     * @return mixed
+     *
+     * @return bool
      */
     abstract public function apply($mediator);
 }

@@ -8,7 +8,6 @@
 
 namespace vr\image\sources;
 
-
 use vr\image\Mediator;
 
 /**
@@ -39,7 +38,7 @@ class UrlSource extends ImageSource
         file_put_contents($this->filename, $content, FILE_BINARY | LOCK_EX);
 
         return new Mediator([
-            'filename' => $this->filename
+            'filename' => $this->filename,
         ]);
     }
 }

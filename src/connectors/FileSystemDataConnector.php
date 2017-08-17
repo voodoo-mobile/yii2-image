@@ -31,7 +31,8 @@ class FileSystemDataConnector extends DataConnector
 
     /**
      * @param Mediator $mediator
-     * @param $filename
+     * @param          $filename
+     *
      * @return bool
      */
     public function upload($mediator, $filename)
@@ -44,6 +45,7 @@ class FileSystemDataConnector extends DataConnector
 
         if (!copy($mediator->getFilename(), $absolute)) {
             $this->lastError = ArrayHelper::getValue(error_get_last(), 'message');
+
             return false;
         }
 
@@ -52,6 +54,7 @@ class FileSystemDataConnector extends DataConnector
 
     /**
      * @param $filename
+     *
      * @return bool
      */
     public function drop($filename)
@@ -63,6 +66,7 @@ class FileSystemDataConnector extends DataConnector
                 unlink($absolute);
             } catch (\Exception $exception) {
                 $this->lastError = $exception->getMessage();
+
                 return false;
             }
         }
@@ -72,6 +76,7 @@ class FileSystemDataConnector extends DataConnector
 
     /**
      * @param $filename
+     *
      * @return bool|string
      */
     public function locate($filename)
@@ -89,18 +94,20 @@ class FileSystemDataConnector extends DataConnector
 
     /**
      * @param string $filename
+     *
      * @return bool
      */
     public function cleanUp($filename)
     {
         $directory = \Yii::getAlias($this->uploadPath) . '/' . $this->folder;
-        $mask = pathinfo($filename, PATHINFO_FILENAME);
+        $mask      = pathinfo($filename, PATHINFO_FILENAME);
 
         foreach (FileHelper::findFiles($directory, ['only' => ["{$mask}-*x*"]]) as $file) {
             try {
                 unlink($file);
             } catch (\Exception $exception) {
                 $this->lastError = $exception->getMessage();
+
                 return false;
             }
         }
@@ -109,8 +116,9 @@ class FileSystemDataConnector extends DataConnector
     }
 
     /**
-     * @param $filename
+     * @param      $filename
      * @param bool $utm
+     *
      * @return string
      */
     public function url($filename, $utm = false)
@@ -120,8 +128,8 @@ class FileSystemDataConnector extends DataConnector
         }
 
         $url = Url::to(\Yii::getAlias($this->uploadUrl)
-            . '/' . $this->folder
-            . '/' . $filename, true);
+                       . '/' . $this->folder
+                       . '/' . $filename, true);
 
         if ($utm) {
             $url .= '?utm=' . uniqid();
@@ -132,6 +140,7 @@ class FileSystemDataConnector extends DataConnector
 
     /**
      * @param $filename
+     *
      * @return bool
      */
     public function exists($filename)
@@ -142,18 +151,19 @@ class FileSystemDataConnector extends DataConnector
     /**
      * @param string $source
      * @param string $destination
+     *
      * @return bool
      */
     public function rename($source, $destination)
     {
-        $source = $this->locate($source);
+        $source      = $this->locate($source);
         $destination = $this->locate($destination);
 
         if (file_exists($source) && !rename($source, $destination)) {
             $this->lastError = ArrayHelper::getValue(error_get_last(), 'message');
+
             return false;
         };
-
 
         return $this->cleanUp($source);
     }

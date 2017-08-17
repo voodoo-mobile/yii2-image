@@ -26,7 +26,7 @@ class Placeholder extends Component
      */
     public $value;
 
-    /** @var bool  */
+    /** @var bool */
     public $onlyNotExist = false;
 
     /**

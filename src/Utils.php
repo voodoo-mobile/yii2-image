@@ -8,7 +8,6 @@
 
 namespace vr\image;
 
-
 use yii\helpers\ArrayHelper;
 
 class Utils
@@ -24,7 +23,7 @@ class Utils
     public static function parseDimension($parameter)
     {
         if (is_array($parameter)) {
-            $width = ArrayHelper::getValue($parameter, 0, null);
+            $width  = ArrayHelper::getValue($parameter, 0, null);
             $height = ArrayHelper::getValue($parameter, 1, $width);
 
             return [$width, $height];
