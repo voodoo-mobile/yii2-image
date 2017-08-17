@@ -8,7 +8,6 @@
 
 namespace vr\image;
 
-
 use vr\image\connectors\FileSystemDataConnector;
 use vr\image\filters\ResizeFilter;
 use vr\image\placeholders\Placeholder;
@@ -18,7 +17,6 @@ use yii\helpers\Inflector;
 
 /**
  * Class ImageDescriptor
- *
  * @package vr\image
  */
 class ImageDescriptor extends Object
@@ -72,6 +70,7 @@ class ImageDescriptor extends Object
 
     /**
      * @param null $dimension
+     *
      * @return mixed
      */
     public function getPlaceholderUrl($dimension = null)
@@ -96,16 +95,6 @@ class ImageDescriptor extends Object
     }
 
     /**
-     * @return bool
-     */
-    public function placeholdOnlyNotExisted()
-    {
-        /** @var Placeholder $placeholder */
-        $placeholder = \Yii::createObject($this->placeholder);
-        return $placeholder->onlyNotExist;
-    }
-
-    /**
      * @return null|object
      */
     private function findResizeFilter()
@@ -121,7 +110,19 @@ class ImageDescriptor extends Object
     }
 
     /**
+     * @return bool
+     */
+    public function placeholdOnlyNotExisted()
+    {
+        /** @var Placeholder $placeholder */
+        $placeholder = \Yii::createObject($this->placeholder);
+
+        return $placeholder->onlyNotExist;
+    }
+
+    /**
      * @param $model
+     *
      * @return mixed|string
      */
     public function getBasename($model)
@@ -144,7 +145,6 @@ class ImageDescriptor extends Object
                 $basename = implode('-', $values);
             }
 
-
             if (is_string($expression)) {
                 $basename = $this->evaluate($model, $expression);
             }
@@ -164,6 +164,7 @@ class ImageDescriptor extends Object
     /**
      * @param $model
      * @param $expression
+     *
      * @return mixed|string
      */
     private function evaluate($model, $expression)

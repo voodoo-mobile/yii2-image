@@ -28,6 +28,7 @@ class ResizeFilter extends Filter
 
     /**
      * @param \vr\image\Mediator $mediator
+     *
      * @return mixed
      */
     public function apply($mediator)
@@ -38,12 +39,15 @@ class ResizeFilter extends Filter
         $this->performResize($imagine, $this->dimension, $this->crop);
 
         $imagine->save($mediator->getFilename());
+
+        return true;
     }
 
     /**
      * @param ImageInterface $imagine
-     * @param $resize
-     * @param bool $crop
+     * @param                $resize
+     * @param bool           $crop
+     *
      * @return mixed
      */
     private function performResize($imagine, $resize, $crop = false)

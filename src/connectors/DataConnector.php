@@ -28,7 +28,7 @@ abstract class DataConnector extends Object
 
     /**
      * @param Mediator $mediator
-     * @param string $filename
+     * @param string   $filename
      *
      * @return bool
      */
@@ -37,37 +37,43 @@ abstract class DataConnector extends Object
     /**
      * @param string $source
      * @param string $destination
+     *
      * @return bool
      */
     abstract public function rename($source, $destination);
 
     /**
      * @param string $filename
+     *
      * @return string
      */
     abstract public function locate($filename);
 
     /**
      * @param string $filename
+     *
      * @return bool
      */
     abstract public function drop($filename);
 
     /**
      * @param string $filename
+     *
      * @return bool
      */
     abstract public function cleanUp($filename);
 
     /**
      * @param string $filename
+     *
      * @return bool
      */
     abstract public function exists($filename);
 
     /**
      * @param string $filename
-     * @param bool $utm
+     * @param bool   $utm
+     *
      * @return string
      */
     abstract public function url($filename, $utm = false);

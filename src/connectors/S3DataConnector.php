@@ -8,7 +8,6 @@
 
 namespace vr\image\connectors;
 
-
 use Aws\Credentials\Credentials;
 use Aws\Result;
 use Aws\S3\S3Client;
@@ -52,14 +51,14 @@ class S3DataConnector extends DataConnector
 
         $this->client = new S3Client([
             'credentials' => new Credentials($this->accessKeyId, $this->secretAccessKey),
-            'region' => $this->region,
-            'version' => 'latest'
+            'region'      => $this->region,
+            'version'     => 'latest',
         ]);
     }
 
     /**
      * @param Mediator $mediator
-     * @param $filename
+     * @param          $filename
      *
      * @return mixed
      */
@@ -74,21 +73,8 @@ class S3DataConnector extends DataConnector
     }
 
     /**
-     *
-     */
-    private function createBucket()
-    {
-        if (!$this->client->doesBucketExist($this->bucket)) {
-            $this->client->createBucket([
-                'Bucket' => $this->bucket
-            ]);
-
-            $this->client->waitUntil('BucketExists', ['Bucket' => $this->bucket]);
-        }
-    }
-
-    /**
      * @param $filename
+     *
      * @return mixed
      */
     public function locate($filename)
@@ -99,6 +85,7 @@ class S3DataConnector extends DataConnector
     /**
      * @param string $source
      * @param string $destination
+     *
      * @return bool
      */
     public function rename($source, $destination)
@@ -110,15 +97,15 @@ class S3DataConnector extends DataConnector
         $destination = $this->locate($destination);
 
         $this->client->copyObject([
-            'Bucket' => $this->bucket,
-            'Key' => $destination,
+            'Bucket'     => $this->bucket,
+            'Key'        => $destination,
             'CopySource' => "{$this->bucket}/{$this->locate($source)}",
-            'ACL' => 'public-read'
+            'ACL'        => 'public-read',
         ]);
 
         $this->client->waitUntil('ObjectExists', [
             'Bucket' => $this->bucket,
-            'Key' => $destination
+            'Key'    => $destination,
         ]);
 
         return $this->drop($source);
@@ -126,13 +113,14 @@ class S3DataConnector extends DataConnector
 
     /**
      * @param $filename
+     *
      * @return mixed
      */
     public function drop($filename)
     {
         $this->client->deleteObject([
             'Bucket' => $this->bucket,
-            'Key' => $this->locate($filename)
+            'Key'    => $this->locate($filename),
         ]);
 
         return $this->cleanUp($filename);
@@ -140,6 +128,7 @@ class S3DataConnector extends DataConnector
 
     /**
      * @param string $filename
+     *
      * @return bool
      */
     public function cleanUp($filename)
@@ -149,7 +138,7 @@ class S3DataConnector extends DataConnector
         /** @var Result $result */
         $result = $this->client->listObjects([
             'Bucket' => $this->bucket,
-            'Prefix' => $mask
+            'Prefix' => $mask,
         ]);
 
         $objects = $result['Contents'];
@@ -159,13 +148,13 @@ class S3DataConnector extends DataConnector
         }
 
         foreach ($objects as $object) {
-            $key = $object['Key'];
+            $key    = $object['Key'];
             $suffix = substr($key, strlen($mask));
 
             if (count(explode('x', $suffix)) > 1) {
                 $this->client->deleteObject([
                     'Bucket' => $this->bucket,
-                    'Key' => $key
+                    'Key'    => $key,
                 ]);
             }
         }
@@ -175,6 +164,7 @@ class S3DataConnector extends DataConnector
 
     /**
      * @param $filename
+     *
      * @return mixed
      */
     public function exists($filename)
@@ -183,8 +173,9 @@ class S3DataConnector extends DataConnector
     }
 
     /**
-     * @param $filename
+     * @param      $filename
      * @param bool $utm
+     *
      * @return mixed
      */
     public function url($filename, $utm = false)
@@ -200,5 +191,19 @@ class S3DataConnector extends DataConnector
         }
 
         return $url;
+    }
+
+    /**
+     *
+     */
+    private function createBucket()
+    {
+        if (!$this->client->doesBucketExist($this->bucket)) {
+            $this->client->createBucket([
+                'Bucket' => $this->bucket,
+            ]);
+
+            $this->client->waitUntil('BucketExists', ['Bucket' => $this->bucket]);
+        }
     }
 }

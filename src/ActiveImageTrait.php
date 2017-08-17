@@ -9,6 +9,7 @@
 namespace vr\image;
 
 use vr\image\sources\ImageSource;
+use yii\base\Component;
 
 /**
  * Class ActiveImageTrait
@@ -18,9 +19,10 @@ trait ActiveImageTrait
 {
 
     /**
-     * @param string $attribute
+     * @param string                $attribute
      * @param int|int[]|string|null $dimension
-     * @param bool $utm
+     * @param bool                  $utm
+     *
      * @return mixed|null|string
      */
     public function url($attribute, $dimension = null, $utm = false)
@@ -33,6 +35,7 @@ trait ActiveImageTrait
      */
     private function getBehaviour()
     {
+        /** @var $this Component */
         $this->ensureBehaviors();
 
         foreach ($this->behaviors as $behavior) {
@@ -45,12 +48,18 @@ trait ActiveImageTrait
     }
 
     /**
-     * @param string $attribute
+     * @param string      $attribute
      * @param ImageSource $source
+     * @param array       $options
+     *  Following options are supported:
+     *  - defaultExtension. If set and the web service cannot determine the extension automatically based on the
+     *  binary content this extension will be used. Otherwise it will be ignored. It can be used for some content
+     *  files which are not described properly in the web service configuration files.
+     *
      * @return bool
      */
-    public function upload($attribute, $source)
+    public function upload($attribute, $source, $options = [])
     {
-        return $this->getBehaviour()->upload($attribute, $source);
+        return $this->getBehaviour()->upload($attribute, $source, $options);
     }
 }

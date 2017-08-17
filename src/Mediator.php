@@ -8,16 +8,13 @@
 
 namespace vr\image;
 
-
 use yii\base\Object;
 use yii\helpers\ArrayHelper;
 use yii\helpers\FileHelper;
 
 /**
  * Class Mediator
- *
  * @package vr\image
- *
  * @property string extension
  */
 class Mediator extends Object
@@ -50,7 +47,7 @@ class Mediator extends Object
      */
     public function getExtension()
     {
-        $mime = FileHelper::getMimeType($this->filename);
+        $mime       = FileHelper::getMimeType($this->filename);
         $extensions = FileHelper::getExtensionsByMimeType($mime);
 
         return ArrayHelper::getValue($extensions, max(count($extensions) - 1, 0), $this->defaultExtension);
@@ -65,7 +62,6 @@ class Mediator extends Object
             try {
                 unlink($this->filename);
             } catch (\Exception $exception) {
-
             }
         }
     }

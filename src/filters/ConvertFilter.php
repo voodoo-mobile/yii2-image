@@ -14,7 +14,8 @@ class ConvertFilter extends Filter
 
     /**
      * @param \vr\image\Mediator $mediator
-     * @return mixed
+     *
+     * @return bool
      * @throws \Exception
      */
     public function apply($mediator)

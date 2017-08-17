@@ -14,7 +14,8 @@ abstract class ImageSource extends Object
 {
     abstract public function createMediator();
 
-    public function validate() {
+    public function validate()
+    {
         // TODO: for future use
         return true;
     }
