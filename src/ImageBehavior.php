@@ -8,7 +8,6 @@
 
 namespace vr\image;
 
-
 use vr\image\connectors\DataConnector;
 use vr\image\filters\Filter;
 use vr\image\filters\ResizeFilter;
@@ -23,12 +22,8 @@ use yii\helpers\Inflector;
 /**
  * Class ImageBehavior
  * @package vr\image
- *
- *
  * Usage:
- *
  *  1. Add this to your model class
- *
  *  public function behaviors()
  *  {
  *      return [
@@ -54,17 +49,13 @@ use yii\helpers\Inflector;
  *          ],
  *      ];
  *  }
- *
  *  2. Don't forget to add ActiveImageTrait to your class to define missing functions
- *
  *  3. Add this code to the model where you upload your image
- *
  *      if (($instance = UploadedFile::getInstance($this, 'image'))) {
  *          $product->upload('image', new UploadedFileSource([
  *              'uploaded' => $instance
  *          ]));
  *      }
- *
  */
 class ImageBehavior extends Behavior
 {
@@ -100,11 +91,11 @@ class ImageBehavior extends Behavior
 
             if (is_numeric($attribute)) {
                 $attribute = $params;
-                $params = [];
+                $params    = [];
             }
 
             $this->descriptors[$attribute] = \Yii::createObject($params + [
-                    'class' => ImageDescriptor::className(),
+                    'class'     => ImageDescriptor::className(),
                     'attribute' => $attribute,
                 ]
             );
@@ -118,18 +109,18 @@ class ImageBehavior extends Behavior
     {
         return [
             BaseActiveRecord::EVENT_BEFORE_UPDATE => 'onBeforeUpdate',
-            BaseActiveRecord::EVENT_AFTER_UPDATE => 'onAfterUpdate',
-            BaseActiveRecord::EVENT_AFTER_DELETE => 'onAfterDelete',
+            BaseActiveRecord::EVENT_AFTER_UPDATE  => 'onAfterUpdate',
+            BaseActiveRecord::EVENT_AFTER_DELETE  => 'onAfterDelete',
         ];
     }
 
     /**
      * Returns the qualified URI of the image
      *
-     * @param $attribute
-     *
-     * @param $dimension
+     * @param      $attribute
+     * @param      $dimension
      * @param bool $utm
+     *
      * @return mixed|null|string URI of the image
      */
     public function url($attribute, $dimension = null, $utm = true)
@@ -150,14 +141,16 @@ class ImageBehavior extends Behavior
 
         if ($descriptor->placeholder
             && !$descriptor->placeholdOnlyNotExisted()
-            && empty($url)) {
+            && empty($url)
+        ) {
 
             $url = $descriptor->getPlaceholderUrl($dimension);
         }
 
         if ($descriptor->placeholder
             && $descriptor->placeholdOnlyNotExisted()
-            && !$connector->exists($filename)) {
+            && !$connector->exists($filename)
+        ) {
 
             $url = $descriptor->getPlaceholderUrl($dimension);
         }
@@ -167,6 +160,7 @@ class ImageBehavior extends Behavior
 
     /**
      * @param $attribute
+     *
      * @return ImageDescriptor
      */
     protected function getDescriptor($attribute)
@@ -176,6 +170,7 @@ class ImageBehavior extends Behavior
 
     /**
      * @param $descriptor
+     *
      * @return object
      */
     private function createConnector($descriptor)
@@ -193,13 +188,15 @@ class ImageBehavior extends Behavior
      */
     private function getActiveRecord()
     {
+        /** @noinspection PhpIncompatibleReturnTypeInspection */
         return $this->owner;
     }
 
     /**
      * @param DataConnector $connector
-     * @param $filename
-     * @param $dimension
+     * @param               $filename
+     * @param               $dimension
+     *
      * @return string
      */
     private function createThumbnail($connector, $filename, $dimension)
@@ -208,12 +205,12 @@ class ImageBehavior extends Behavior
 
         if (!$connector->exists($thumbnail)) {
             $source = new UrlSource([
-                'url' => $connector->url($filename)
+                'url' => $connector->url($filename),
             ]);
 
             $mediator = $source->createMediator();
             (new ResizeFilter([
-                'dimension' => $dimension
+                'dimension' => $dimension,
             ]))->apply($mediator);
 
             $connector->upload($mediator, $thumbnail);
@@ -225,6 +222,7 @@ class ImageBehavior extends Behavior
     /**
      * @param $filename
      * @param $dimension
+     *
      * @return string
      */
     private function getThumbnailFilename($filename, $dimension)
@@ -234,22 +232,29 @@ class ImageBehavior extends Behavior
         list($width, $height) = Utils::parseDimension($dimension);
 
         return ArrayHelper::getValue($info, 'filename') . "-{$width}x{$height}." .
-            ArrayHelper::getValue($info, 'extension');
+               ArrayHelper::getValue($info, 'extension');
     }
 
     /**
-     * @param string $attribute
+     * @param string      $attribute
      * @param ImageSource $source
+     * @param array       $options
+     *  Following options are supported:
+     *  - defaultExtension. If set and the web service cannot determine the extension automatically based on the
+     *  binary content this extension will be used. Otherwise it will be ignored. It can be used for some content
+     *  files which are not described properly in the web service configuration files.
+     *
      * @return bool
      */
-    public function upload($attribute, $source)
+    public function upload($attribute, $source, $options = [])
     {
         if (!$source || !$source->validate()) {
             return false;
         }
 
         /** @var Mediator $mediator */
-        $mediator = $source->createMediator();
+        $mediator                   = $source->createMediator();
+        $mediator->defaultExtension = ArrayHelper::getValue($options, 'defaultExtension');
 
         /** @var Filter[] $filters */
         $descriptor = $this->getDescriptor($attribute);
@@ -269,6 +274,7 @@ class ImageBehavior extends Behavior
 
         if (!$connector->upload($mediator, $filename)) {
             $this->getActiveRecord()->addError($descriptor->attribute, $connector->lastError);
+
             return false;
         }
 
@@ -279,16 +285,15 @@ class ImageBehavior extends Behavior
 
     /**
      * @param ImageDescriptor $descriptor
-     * @param $extension
-     * @param bool $unique
+     * @param                 $extension
+     *
      * @return string
      */
-    private function getFilename($descriptor, $extension, $unique = false)
+    private function getFilename($descriptor, $extension)
     {
 
-
         if (empty($extension)) {
-            $previous = $this->getActiveRecord()->getAttribute($descriptor->attribute);
+            $previous  = $this->getActiveRecord()->getAttribute($descriptor->attribute);
             $extension = pathinfo($previous, PATHINFO_EXTENSION);
         }
 
@@ -328,7 +333,6 @@ class ImageBehavior extends Behavior
 
     public function onAfterUpdate()
     {
-
     }
 
     /**
