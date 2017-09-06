@@ -8,7 +8,7 @@
 
 namespace vr\image;
 
-use yii\base\Object;
+use yii\base\BaseObject;
 use yii\helpers\ArrayHelper;
 use yii\helpers\FileHelper;
 
@@ -17,7 +17,7 @@ use yii\helpers\FileHelper;
  * @package vr\image
  * @property string extension
  */
-class Mediator extends Object
+class Mediator extends BaseObject
 {
     /**
      * @var string
@@ -35,6 +35,11 @@ class Mediator extends Object
     public $defaultExtension;
 
     /**
+     * @var bool
+     */
+    public $autoDetectExtension = true;
+
+    /**
      * @return string
      */
     public function getFilename()
@@ -47,10 +52,15 @@ class Mediator extends Object
      */
     public function getExtension()
     {
-        $mime       = FileHelper::getMimeType($this->filename);
-        $extensions = FileHelper::getExtensionsByMimeType($mime);
+        $extension = $this->defaultExtension;
 
-        return ArrayHelper::getValue($extensions, max(count($extensions) - 1, 0), $this->defaultExtension);
+        if ($this->autoDetectExtension || !$extension) {
+            $mime       = FileHelper::getMimeType($this->filename);
+            $extensions = FileHelper::getExtensionsByMimeType($mime);
+            $extension  = ArrayHelper::getValue($extensions, max(count($extensions) - 1, 0), $this->defaultExtension);
+        }
+
+        return trim($extension);
     }
 
     /**
@@ -62,6 +72,15 @@ class Mediator extends Object
             try {
                 unlink($this->filename);
             } catch (\Exception $exception) {
+            }
+        }
+    }
+
+    public function setOptions($options)
+    {
+        foreach ($options as $key => $value) {
+            if ($this->canSetProperty($key)) {
+                $this->$key = $value;
             }
         }
     }

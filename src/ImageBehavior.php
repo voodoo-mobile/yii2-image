@@ -254,7 +254,7 @@ class ImageBehavior extends Behavior
 
         /** @var Mediator $mediator */
         $mediator                   = $source->createMediator();
-        $mediator->defaultExtension = ArrayHelper::getValue($options, 'defaultExtension');
+        $mediator->setOptions($options);
 
         /** @var Filter[] $filters */
         $descriptor = $this->getDescriptor($attribute);
