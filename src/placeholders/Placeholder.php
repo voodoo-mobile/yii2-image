@@ -46,7 +46,7 @@ abstract class Placeholder extends Component
     /**
      * @var int
      */
-    public $when = self::USE_ALWAYS;
+    public $useWhen = self::USE_IF_NULL;
 
     /**
      * @param int $width

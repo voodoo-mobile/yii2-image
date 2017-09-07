@@ -143,7 +143,7 @@ class ImageBehavior extends Behavior
         $url = $connector->url($filename, $utm);
 
         if ($descriptor->placeholder) {
-            $url = $descriptor->applyPlaceholder($connector, $filename, $dimension);
+            $url = $descriptor->applyPlaceholder($url, $dimension);
         }
 
         return $url;
