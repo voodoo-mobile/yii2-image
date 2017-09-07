@@ -12,18 +12,13 @@ namespace vr\image\placeholders;
 class LoremPixel extends Placeholder
 {
     /**
+     * @param $width
+     * @param $height
      *
+     * @return mixed
      */
-    public function init()
+    public function getImageUrl($width = self::DEFAULT_WIDTH, $height = self::DEFAULT_HEIGHT)
     {
-        parent::init();
-
-        if (!$this->value) {
-            $this->value = function ($width, $height) {
-                /** @noinspection SpellCheckingInspection */
-                return sprintf('http://lorempixel.com/%d/%d', $width, $height);
-            };
-        }
+        return "https://lorempixel.com/{$width}/{$height}";
     }
-
 }

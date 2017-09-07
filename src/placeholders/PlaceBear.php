@@ -9,22 +9,14 @@ namespace vr\image\placeholders;
  */
 class PlaceBear extends Placeholder
 {
-    public $isGray = false;
-
     /**
+     * @param $width
+     * @param $height
      *
+     * @return mixed
      */
-    public function init()
+    public function getImageUrl($width = self::DEFAULT_WIDTH, $height = self::DEFAULT_HEIGHT)
     {
-        parent::init();
-
-        if (!$this->value) {
-            $this->value = function ($width, $height) {
-                /** @noinspection SpellCheckingInspection */
-                return sprintf($this->isGray ? 'http://placebear.com/g/%d/%d' : 'http://placebear.com/%d/%d',
-                    $width, $height);
-            };
-        }
+        return "https://placebear.com/{$width}/{$height}";
     }
-
 }

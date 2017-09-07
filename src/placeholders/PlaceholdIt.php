@@ -10,18 +10,13 @@ namespace vr\image\placeholders;
 class PlaceholdIt extends Placeholder
 {
     /**
+     * @param $width
+     * @param $height
      *
+     * @return mixed
      */
-    public function init()
+    public function getImageUrl($width = self::DEFAULT_WIDTH, $height = self::DEFAULT_HEIGHT)
     {
-        parent::init();
-
-        if (!$this->value) {
-            $this->value = function ($width, $height) {
-                /** @noinspection SpellCheckingInspection */
-                return sprintf('https://placehold.it/%dx%d', $width, $height);
-            };
-        }
+        return "https://placehold.it/{$width}x{$height}";
     }
-
 }

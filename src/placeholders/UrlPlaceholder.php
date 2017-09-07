@@ -15,9 +15,9 @@ class UrlPlaceholder extends Placeholder
      * @param $width
      * @param $height
      *
-     * @return string
+     * @return mixed
      */
-    public function getImage($width, $height)
+    public function getImageUrl($width = self::DEFAULT_WIDTH, $height = self::DEFAULT_HEIGHT)
     {
         return $this->url;
     }
