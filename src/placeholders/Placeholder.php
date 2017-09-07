@@ -43,8 +43,10 @@ abstract class Placeholder extends Component
      */
     const DEFAULT_HEIGHT = 480;
 
-    /** @var bool */
-    public $onlyNotExist = false;
+    /**
+     * @var int
+     */
+    public $when = self::USE_ALWAYS;
 
     /**
      * @param int $width
@@ -54,7 +56,7 @@ abstract class Placeholder extends Component
      */
     public function getImage($width = self::DEFAULT_WIDTH, $height = self::DEFAULT_HEIGHT)
     {
-        return file_get_contents($this->getImageUrl($width, $height));
+        return file_get_contents($this->getImageUrl($width ?: self::DEFAULT_WIDTH, $height ?: self::DEFAULT_WIDTH));
     }
 
     /**

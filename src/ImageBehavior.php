@@ -63,14 +63,17 @@ class ImageBehavior extends Behavior
      *
      */
     const DEFAULT_IMAGE_DIMENSION = 320;
+
     /**
      * @var
      */
     public $imageAttributes;
+
     /**
      * @var
      */
     public $descriptors;
+
     /**
      * @var bool
      */
@@ -139,20 +142,8 @@ class ImageBehavior extends Behavior
 
         $url = $connector->url($filename, $utm);
 
-        if ($descriptor->placeholder
-            && !$descriptor->placeholdOnlyNotExisted()
-            && empty($url)
-        ) {
-
-            $url = $descriptor->getPlaceholderUrl($dimension);
-        }
-
-        if ($descriptor->placeholder
-            && $descriptor->placeholdOnlyNotExisted()
-            && !$connector->exists($filename)
-        ) {
-
-            $url = $descriptor->getPlaceholderUrl($dimension);
+        if ($descriptor->placeholder) {
+            $url = $descriptor->applyPlaceholder($connector, $filename, $dimension);
         }
 
         return $url;
@@ -253,7 +244,7 @@ class ImageBehavior extends Behavior
         }
 
         /** @var Mediator $mediator */
-        $mediator                   = $source->createMediator();
+        $mediator = $source->createMediator();
         $mediator->setOptions($options);
 
         /** @var Filter[] $filters */

@@ -8,6 +8,7 @@
 
 namespace vr\image;
 
+use vr\image\connectors\DataConnector;
 use vr\image\connectors\FileSystemDataConnector;
 use vr\image\filters\ResizeFilter;
 use vr\image\placeholders\Placeholder;
@@ -110,17 +111,6 @@ class ImageDescriptor extends Object
     }
 
     /**
-     * @return bool
-     */
-    public function placeholdOnlyNotExisted()
-    {
-        /** @var Placeholder $placeholder */
-        $placeholder = \Yii::createObject($this->placeholder);
-
-        return $placeholder->onlyNotExist;
-    }
-
-    /**
      * @param $model
      *
      * @return mixed|string
@@ -176,5 +166,23 @@ class ImageDescriptor extends Object
         }
 
         return Inflector::slug($basename);
+    }
+
+    public function applyPlaceholder(DataConnector $connector, $filename, $dimension)
+    {
+        /** @var Placeholder $placeholder */
+        $placeholder = \Yii::createObject($this->placeholder);
+
+        list($width, $height) = Utils::parseDimension($dimension);
+
+        if (($placeholder->when & Placeholder::USE_IF_NULL) && empty($filename)) {
+            return $placeholder->getImageUrl($width, $height);
+        }
+
+        if (($placeholder->when & Placeholder::USE_IF_MISSING) && !$connector->exists($filename)) {
+            return $placeholder->getImageUrl($width, $height);
+        }
+
+        return null;
     }
 }
