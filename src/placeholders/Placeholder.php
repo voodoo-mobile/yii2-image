@@ -21,6 +21,12 @@ class Placeholder extends Component
      */
     const DEFAULT_SIZE = 320;
 
+    const USE_ALWAYS = 0xF;
+
+    const USE_IF_MISSING = 0x1;
+
+    const USE_IF_NULL = 0x2;
+
     /**
      * @var
      */
