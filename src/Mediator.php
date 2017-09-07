@@ -8,7 +8,7 @@
 
 namespace vr\image;
 
-use yii\base\BaseObject;
+use yii\base\Object;
 use yii\helpers\ArrayHelper;
 use yii\helpers\FileHelper;
 
@@ -17,7 +17,7 @@ use yii\helpers\FileHelper;
  * @package vr\image
  * @property string extension
  */
-class Mediator extends BaseObject
+class Mediator extends Object
 {
     /**
      * @var string
