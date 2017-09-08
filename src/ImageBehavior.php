@@ -97,11 +97,14 @@ class ImageBehavior extends Behavior
                 $params    = [];
             }
 
-            $this->descriptors[$attribute] = \Yii::createObject($params + [
+            /** @var ImageDescriptor $descriptor */
+            $descriptor = \Yii::createObject($params + [
                     'class'     => ImageDescriptor::className(),
                     'attribute' => $attribute,
                 ]
             );
+
+            $this->descriptors[$attribute] = $descriptor;
         }
     }
 
@@ -156,7 +159,19 @@ class ImageBehavior extends Behavior
      */
     protected function getDescriptor($attribute)
     {
-        return $this->descriptors[$attribute];
+        $descriptor        = $this->descriptors[$attribute];
+        $descriptor->model = $this->getActiveRecord();
+
+        return $descriptor;
+    }
+
+    /**
+     * @return ActiveRecord
+     */
+    private function getActiveRecord()
+    {
+        /** @noinspection PhpIncompatibleReturnTypeInspection */
+        return $this->owner;
     }
 
     /**
@@ -172,15 +187,6 @@ class ImageBehavior extends Behavior
                 'folder' => Inflector::camel2id($class, '-'),
             ]
         );
-    }
-
-    /**
-     * @return ActiveRecord
-     */
-    private function getActiveRecord()
-    {
-        /** @noinspection PhpIncompatibleReturnTypeInspection */
-        return $this->owner;
     }
 
     /**
@@ -257,7 +263,7 @@ class ImageBehavior extends Behavior
         /** @var DataConnector $connector */
         $connector = $this->createConnector($descriptor);
 
-        $filename = $this->getFilename($descriptor, $mediator->extension);
+        $filename = $descriptor->getFilename($mediator->extension);
 
         if (($existing = $this->getActiveRecord()->getAttribute($attribute))) {
             $connector->drop($existing);
@@ -275,36 +281,15 @@ class ImageBehavior extends Behavior
     }
 
     /**
-     * @param ImageDescriptor $descriptor
-     * @param                 $extension
-     *
-     * @return string
-     */
-    private function getFilename($descriptor, $extension)
-    {
-
-        if (empty($extension)) {
-            $previous  = $this->getActiveRecord()->getAttribute($descriptor->attribute);
-            $extension = pathinfo($previous, PATHINFO_EXTENSION);
-        }
-
-        $basename = $descriptor->getBasename($this->getActiveRecord());
-
-        return "{$basename}-{$descriptor->attribute}" . ($extension ? '.' . $extension : null);
-    }
-
-    /**
      *
      */
     public function onBeforeUpdate()
     {
-        $activeRecord = $this->getActiveRecord();
-
         /** @var ImageDescriptor $descriptor */
         foreach ($this->descriptors as $descriptor) {
-            if (!$activeRecord->isAttributeChanged($descriptor->basedOn)) {
-                continue;
-            }
+//            if (!$activeRecord->isAttributeChanged($descriptor->basedOn)) {
+//                continue;
+//            }
 
             $connector = $this->createConnector($descriptor);
 
@@ -314,7 +299,7 @@ class ImageBehavior extends Behavior
                 continue;
             }
 
-            $destination = $this->getFilename($descriptor, null);
+            $destination = $descriptor->getFilename();
 
             $this->getActiveRecord()->setAttribute($descriptor->attribute, $destination);
 

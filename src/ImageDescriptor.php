@@ -11,6 +11,7 @@ namespace vr\image;
 use vr\image\connectors\FileSystemDataConnector;
 use vr\image\filters\ResizeFilter;
 use vr\image\placeholders\Placeholder;
+use yii\base\Model;
 use yii\base\Object;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
@@ -42,19 +43,14 @@ class ImageDescriptor extends Object
     public $placeholder;
 
     /**
-     * @var null
+     * @var string
      */
-    public $basedOn = null;
+    public $template = '{attribute}-{datetime}-{tag}';
 
     /**
-     * @var
+     * @var Model
      */
-    public $timestamp;
-
-    /**
-     * @var
-     */
-    public $tag;
+    public $model;
 
     /**
      *
@@ -110,64 +106,6 @@ class ImageDescriptor extends Object
     }
 
     /**
-     * @param $model
-     *
-     * @return mixed|string
-     */
-    public function getBasename($model)
-    {
-        $basename = crc32(uniqid());
-
-        if ($this->basedOn) {
-            $expression = $this->basedOn;
-
-            if (is_callable($expression)) {
-                $expression = call_user_func($expression, $model);
-            }
-
-            if (is_array($expression)) {
-
-                $values = ArrayHelper::getColumn($expression, function ($item) use ($model) {
-                    return $this->evaluate($model, $item);
-                });
-
-                $basename = implode('-', $values);
-            }
-
-            if (is_string($expression)) {
-                $basename = $this->evaluate($model, $expression);
-            }
-        }
-
-        if ($this->timestamp) {
-            $basename .= '-' . (new \DateTime())->format($this->timestamp);
-        }
-
-        if ($this->tag && $this->basedOn) {
-            $basename .= '-' . crc32(uniqid());
-        }
-
-        return $basename;
-    }
-
-    /**
-     * @param $model
-     * @param $expression
-     *
-     * @return mixed|string
-     */
-    private function evaluate($model, $expression)
-    {
-        $basename = $model;
-
-        foreach (explode('.', $expression) as $item) {
-            $basename = ArrayHelper::getValue($basename, $item);
-        }
-
-        return Inflector::slug($basename);
-    }
-
-    /**
      * @param $url
      * @param $dimension
      *
@@ -200,5 +138,53 @@ class ImageDescriptor extends Object
         $headers = get_headers($url);
 
         return strpos($headers[0], '200') !== false;
+    }
+
+    /**
+     * @param $extension
+     *
+     * @return string
+     */
+    public function getFilename($extension = null)
+    {
+
+        if (empty($extension)) {
+            $previous  = ArrayHelper::getValue($this->model, $this->attribute);
+            $extension = pathinfo($previous, PATHINFO_EXTENSION);
+        }
+
+        return $this->getBasename() . ($extension ? '.' . $extension : null);
+    }
+
+    /**
+     * @return mixed|string
+     */
+    public function getBasename()
+    {
+        $datetime = new \DateTime();
+
+        preg_match_all('/{\.(.*?)}/', $this->template, $matches);
+
+        $replacements = [];
+
+        $attributes = ArrayHelper::getValue($matches, 1);
+
+        if ($attributes && is_array($attributes)) {
+            foreach ($attributes as $attribute) {
+                $replacements["{.$attribute}"] = ArrayHelper::getValue($this->model, $attribute);
+            }
+        }
+
+        $replacements += [
+            '{tag}'       => crc32(uniqid()),
+            '{datetime}'  => $datetime->format('Y-m-d-H-i-s'),
+            '{time}'      => $datetime->format('H-i-s'),
+            '{date}'      => $datetime->format('Y-m-d'),
+            '{attribute}' => $this->attribute,
+        ];
+
+        $basename = strtr($this->template, $replacements);
+
+        return Inflector::slug($basename);
     }
 }
