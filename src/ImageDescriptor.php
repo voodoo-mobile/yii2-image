@@ -8,9 +8,11 @@
 
 namespace vr\image;
 
+use vr\image\connectors\DataConnector;
 use vr\image\connectors\FileSystemDataConnector;
 use vr\image\filters\ResizeFilter;
 use vr\image\placeholders\Placeholder;
+use vr\image\sources\UrlSource;
 use yii\base\Model;
 use yii\base\Object;
 use yii\helpers\ArrayHelper;
@@ -19,6 +21,7 @@ use yii\helpers\Inflector;
 /**
  * Class ImageDescriptor
  * @package vr\image
+ * @property Model $model
  */
 class ImageDescriptor extends Object
 {
@@ -33,7 +36,7 @@ class ImageDescriptor extends Object
     public $attribute;
 
     /**
-     * @var
+     * @var array
      */
     public $connector;
 
@@ -50,7 +53,7 @@ class ImageDescriptor extends Object
     /**
      * @var Model
      */
-    public $model;
+    private $model;
 
     /**
      *
@@ -61,6 +64,7 @@ class ImageDescriptor extends Object
             $this->connector = ['class' => FileSystemDataConnector::className()];
         }
 
+        /** @noinspection PhpDeprecationInspection */
         parent::init();
     }
 
@@ -106,6 +110,89 @@ class ImageDescriptor extends Object
     }
 
     /**
+     * @param           $attribute
+     * @param           $dimension
+     * @param bool      $utm
+     *
+     * @return mixed|string
+     */
+    public function url($attribute, $dimension = null, $utm = true)
+    {
+        /** @var DataConnector $connector */
+        $connector = $this->createConnector();
+
+        $filename = $this->model->{$attribute};
+
+        if (!empty($filename) && !empty($dimension) && $connector->exists($filename)) {
+            $filename = $this->createThumbnail($connector, $filename, $dimension);
+        }
+
+        $url = $connector->url($filename, $utm);
+
+        if ($this->placeholder) {
+            $url = $this->applyPlaceholder($url, $dimension);
+        }
+
+        return $url;
+    }
+
+    /**
+     * @return object
+     */
+    private function createConnector()
+    {
+        $class = (new \ReflectionClass($this->model))->getShortName();
+
+        return \Yii::createObject($this->connector + [
+                'folder' => Inflector::camel2id($class, '-'),
+            ]
+        );
+    }
+
+    /**
+     * @param DataConnector $connector
+     * @param               $filename
+     * @param               $dimension
+     *
+     * @return string
+     */
+    private function createThumbnail($connector, $filename, $dimension)
+    {
+        $thumbnail = $this->getThumbnailFilename($filename, $dimension);
+
+        if (!$connector->exists($thumbnail)) {
+            $source = new UrlSource([
+                'url' => $connector->url($filename),
+            ]);
+
+            $mediator = $source->createMediator();
+            (new ResizeFilter([
+                'dimension' => $dimension,
+            ]))->apply($mediator);
+
+            $connector->upload($mediator, $thumbnail);
+        }
+
+        return $thumbnail;
+    }
+
+    /**
+     * @param $filename
+     * @param $dimension
+     *
+     * @return string
+     */
+    private function getThumbnailFilename($filename, $dimension)
+    {
+        $info = pathinfo($filename);
+
+        list($width, $height) = Utils::parseDimension($dimension);
+
+        return ArrayHelper::getValue($info, 'filename') . "-{$width}x{$height}." .
+               ArrayHelper::getValue($info, 'extension');
+    }
+
+    /**
      * @param $url
      * @param $dimension
      *
@@ -129,6 +216,11 @@ class ImageDescriptor extends Object
         return $url;
     }
 
+    /**
+     * @param $url
+     *
+     * @return bool
+     */
     private function isUrlValid($url)
     {
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
@@ -138,6 +230,37 @@ class ImageDescriptor extends Object
         $headers = get_headers($url);
 
         return strpos($headers[0], '200') !== false;
+    }
+
+    /**
+     * @param Mediator $mediator
+     *
+     * @return bool
+     */
+    public function upload(Mediator $mediator)
+    {
+        foreach ($this->filters as $name => $filter) {
+            \Yii::createObject($filter)->apply($mediator);
+        }
+
+        /** @var DataConnector $connector */
+        $connector = $this->createConnector();
+
+        $filename = $this->getFilename($mediator->extension);
+
+        if (($existing = $this->model->{$this->attribute})) {
+            $connector->drop($existing);
+        }
+
+        if (!$connector->upload($mediator, $filename)) {
+            $this->model->addError($this->attribute, $connector->lastError);
+
+            return false;
+        }
+
+        $this->model->{$this->attribute} = $filename;
+
+        return true;
     }
 
     /**
@@ -186,5 +309,46 @@ class ImageDescriptor extends Object
         $basename = strtr($this->template, $replacements);
 
         return Inflector::slug($basename);
+    }
+
+    /**
+     *
+     */
+    public function onAfterDelete()
+    {
+        $connector = $this->createConnector();
+
+        if ($connector->drop($this->model->{$this->attribute})) {
+            $this->model->{$this->attribute} = null;
+        };
+    }
+
+    /**
+     *
+     */
+    public function onBeforeUpdate()
+    {
+        $connector = $this->createConnector();
+        $source    = $this->model->{$this->attribute};
+
+        if ($source) {
+            $this->model->{$this->attribute} = ($destination = $this->getFilename());
+            $connector->rename($source, $destination);
+        }
+    }
+
+    /**
+     * @param Model $model
+     */
+    public function setModel(Model $model)
+    {
+        $this->model = $model;
+    }
+
+    /**
+     *
+     */
+    public function onAfterUpdate() {
+
     }
 }

@@ -8,16 +8,9 @@
 
 namespace vr\image;
 
-use vr\image\connectors\DataConnector;
-use vr\image\filters\Filter;
-use vr\image\filters\ResizeFilter;
 use vr\image\sources\ImageSource;
-use vr\image\sources\UrlSource;
 use yii\base\Behavior;
-use yii\db\ActiveRecord;
 use yii\db\BaseActiveRecord;
-use yii\helpers\ArrayHelper;
-use yii\helpers\Inflector;
 
 /**
  * Class ImageBehavior
@@ -80,40 +73,12 @@ class ImageBehavior extends Behavior
     public $skipUpdateOnClean = !YII_DEBUG;
 
     /**
-     *
-     */
-    public function init()
-    {
-        parent::init();
-
-        if (!is_array($this->imageAttributes)) {
-            $this->imageAttributes = [$this->imageAttributes];
-        }
-
-        foreach ($this->imageAttributes as $attribute => $params) {
-
-            if (is_numeric($attribute)) {
-                $attribute = $params;
-                $params    = [];
-            }
-
-            /** @var ImageDescriptor $descriptor */
-            $descriptor = \Yii::createObject($params + [
-                    'class'     => ImageDescriptor::className(),
-                    'attribute' => $attribute,
-                ]
-            );
-
-            $this->descriptors[$attribute] = $descriptor;
-        }
-    }
-
-    /**
      * @inheritdoc
      */
     public function events()
     {
         return [
+            BaseActiveRecord::EVENT_INIT          => 'onInit',
             BaseActiveRecord::EVENT_BEFORE_UPDATE => 'onBeforeUpdate',
             BaseActiveRecord::EVENT_AFTER_UPDATE  => 'onAfterUpdate',
             BaseActiveRecord::EVENT_AFTER_DELETE  => 'onAfterDelete',
@@ -134,22 +99,7 @@ class ImageBehavior extends Behavior
         /** @var ImageDescriptor $descriptor */
         $descriptor = $this->getDescriptor($attribute);
 
-        /** @var DataConnector $connector */
-        $connector = $this->createConnector($descriptor);
-
-        $filename = $this->getActiveRecord()->getAttribute($attribute);
-
-        if (!empty($filename) && !empty($dimension) && $connector->exists($filename)) {
-            $filename = $this->createThumbnail($connector, $filename, $dimension);
-        }
-
-        $url = $connector->url($filename, $utm);
-
-        if ($descriptor->placeholder) {
-            $url = $descriptor->applyPlaceholder($url, $dimension);
-        }
-
-        return $url;
+        return $descriptor->url($attribute, $dimension, $utm);
     }
 
     /**
@@ -159,77 +109,7 @@ class ImageBehavior extends Behavior
      */
     protected function getDescriptor($attribute)
     {
-        $descriptor        = $this->descriptors[$attribute];
-        $descriptor->model = $this->getActiveRecord();
-
-        return $descriptor;
-    }
-
-    /**
-     * @return ActiveRecord
-     */
-    private function getActiveRecord()
-    {
-        /** @noinspection PhpIncompatibleReturnTypeInspection */
-        return $this->owner;
-    }
-
-    /**
-     * @param $descriptor
-     *
-     * @return object
-     */
-    private function createConnector($descriptor)
-    {
-        $class = (new \ReflectionClass($this->getActiveRecord()))->getShortName();
-
-        return \Yii::createObject($descriptor->connector + [
-                'folder' => Inflector::camel2id($class, '-'),
-            ]
-        );
-    }
-
-    /**
-     * @param DataConnector $connector
-     * @param               $filename
-     * @param               $dimension
-     *
-     * @return string
-     */
-    private function createThumbnail($connector, $filename, $dimension)
-    {
-        $thumbnail = $this->getThumbnailFilename($filename, $dimension);
-
-        if (!$connector->exists($thumbnail)) {
-            $source = new UrlSource([
-                'url' => $connector->url($filename),
-            ]);
-
-            $mediator = $source->createMediator();
-            (new ResizeFilter([
-                'dimension' => $dimension,
-            ]))->apply($mediator);
-
-            $connector->upload($mediator, $thumbnail);
-        }
-
-        return $thumbnail;
-    }
-
-    /**
-     * @param $filename
-     * @param $dimension
-     *
-     * @return string
-     */
-    private function getThumbnailFilename($filename, $dimension)
-    {
-        $info = pathinfo($filename);
-
-        list($width, $height) = Utils::parseDimension($dimension);
-
-        return ArrayHelper::getValue($info, 'filename') . "-{$width}x{$height}." .
-               ArrayHelper::getValue($info, 'extension');
+        return $this->descriptors[$attribute];
     }
 
     /**
@@ -253,31 +133,37 @@ class ImageBehavior extends Behavior
         $mediator = $source->createMediator();
         $mediator->setOptions($options);
 
-        /** @var Filter[] $filters */
         $descriptor = $this->getDescriptor($attribute);
 
-        foreach ($descriptor->filters as $name => $filter) {
-            \Yii::createObject($filter)->apply($mediator);
+        return $descriptor->upload($mediator);
+    }
+
+    /**
+     *
+     */
+    public function onInit()
+    {
+        if (!is_array($this->imageAttributes)) {
+            $this->imageAttributes = [$this->imageAttributes];
         }
 
-        /** @var DataConnector $connector */
-        $connector = $this->createConnector($descriptor);
+        foreach ($this->imageAttributes as $attribute => $params) {
 
-        $filename = $descriptor->getFilename($mediator->extension);
+            if (is_numeric($attribute)) {
+                $attribute = $params;
+                $params    = [];
+            }
 
-        if (($existing = $this->getActiveRecord()->getAttribute($attribute))) {
-            $connector->drop($existing);
+            /** @var ImageDescriptor $descriptor */
+            $descriptor = \Yii::createObject($params + [
+                    'class'     => ImageDescriptor::className(),
+                    'attribute' => $attribute,
+                    'model'     => $this->owner,
+                ]
+            );
+
+            $this->descriptors[$attribute] = $descriptor;
         }
-
-        if (!$connector->upload($mediator, $filename)) {
-            $this->getActiveRecord()->addError($descriptor->attribute, $connector->lastError);
-
-            return false;
-        }
-
-        $this->owner->$attribute = $filename;
-
-        return true;
     }
 
     /**
@@ -286,29 +172,20 @@ class ImageBehavior extends Behavior
     public function onBeforeUpdate()
     {
         /** @var ImageDescriptor $descriptor */
-        foreach ($this->descriptors as $descriptor) {
-//            if (!$activeRecord->isAttributeChanged($descriptor->basedOn)) {
-//                continue;
-//            }
-
-            $connector = $this->createConnector($descriptor);
-
-            $source = $this->getActiveRecord()->getAttribute($descriptor->attribute);
-
-            if (!$source) {
-                continue;
-            }
-
-            $destination = $descriptor->getFilename();
-
-            $this->getActiveRecord()->setAttribute($descriptor->attribute, $destination);
-
-            $connector->rename($source, $destination);
+        foreach ($this->descriptors as $attribute => $descriptor) {
+            $descriptor->onBeforeUpdate();
         }
     }
 
+    /**
+     *
+     */
     public function onAfterUpdate()
     {
+        /** @var ImageDescriptor $descriptor */
+        foreach ($this->descriptors as $attribute => $descriptor) {
+            $descriptor->onAfterUpdate();
+        }
     }
 
     /**
@@ -318,13 +195,7 @@ class ImageBehavior extends Behavior
     {
         /** @var ImageDescriptor $descriptor */
         foreach ($this->descriptors as $descriptor) {
-
-            /** @var DataConnector $connector */
-            $connector = $this->createConnector($descriptor);
-
-            if ($connector->drop($this->getActiveRecord()->getAttribute($descriptor->attribute))) {
-                $this->getActiveRecord()->setAttribute($descriptor->attribute, null);
-            };
+            $descriptor->onAfterDelete();
         }
     }
 }
