@@ -69,47 +69,6 @@ class ImageDescriptor extends Object
     }
 
     /**
-     * @param null $dimension
-     *
-     * @return mixed
-     */
-    public function getPlaceholderUrl($dimension = null)
-    {
-        /** @var Placeholder $placeholder */
-        $placeholder = \Yii::createObject($this->placeholder);
-
-        $width = $height = ImageBehavior::DEFAULT_IMAGE_DIMENSION;
-
-        if ($dimension) {
-            list($width, $height) = Utils::parseDimension($dimension);
-        } else {
-            /** @var ResizeFilter $filter */
-            $filter = $this->findResizeFilter();
-
-            if ($filter) {
-                list($width, $height) = Utils::parseDimension($filter->dimension);
-            }
-        }
-
-        return $placeholder->getImage($width, $height);
-    }
-
-    /**
-     * @return null|object
-     */
-    private function findResizeFilter()
-    {
-        foreach ($this->filters as $filter) {
-            $instance = \Yii::createObject($filter);
-            if (is_a($instance, ResizeFilter::className())) {
-                return $instance;
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * @param           $attribute
      * @param           $dimension
      * @param bool      $utm
@@ -198,12 +157,24 @@ class ImageDescriptor extends Object
      *
      * @return mixed
      */
-    public function applyPlaceholder($url, $dimension)
+    public function applyPlaceholder($url, $dimension = null)
     {
         /** @var Placeholder $placeholder */
         $placeholder = \Yii::createObject($this->placeholder);
-
         list($width, $height) = Utils::parseDimension($dimension);
+
+        if (!$width || !$height) {
+            /** @var ResizeFilter $filter */
+            $filter = $this->findResizeFilter();
+
+            if ($filter) {
+                list($width, $height) = Utils::parseDimension($filter->dimension);
+            }
+        }
+
+        if (!$width || !$height) {
+            $width = $height = ImageBehavior::DEFAULT_IMAGE_DIMENSION;
+        }
 
         if (($placeholder->useWhen & Placeholder::USE_IF_NULL) && empty($url)) {
             return $placeholder->getImageUrl($width, $height);
@@ -214,6 +185,21 @@ class ImageDescriptor extends Object
         }
 
         return $url;
+    }
+
+    /**
+     * @return null|object
+     */
+    private function findResizeFilter()
+    {
+        foreach ($this->filters as $filter) {
+            $instance = \Yii::createObject($filter);
+            if (is_a($instance, ResizeFilter::className())) {
+                return $instance;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -286,16 +272,10 @@ class ImageDescriptor extends Object
     {
         $datetime = new \DateTime();
 
-        preg_match_all('/{\.(.*?)}/', $this->template, $matches);
-
         $replacements = [];
 
-        $attributes = ArrayHelper::getValue($matches, 1);
-
-        if ($attributes && is_array($attributes)) {
-            foreach ($attributes as $attribute) {
-                $replacements["{.$attribute}"] = ArrayHelper::getValue($this->model, $attribute);
-            }
+        foreach ($this->getBasedOnAttributes() as $attribute) {
+            $replacements["{.$attribute}"] = ArrayHelper::getValue($this->model, $attribute);
         }
 
         $replacements += [
@@ -309,6 +289,23 @@ class ImageDescriptor extends Object
         $basename = strtr($this->template, $replacements);
 
         return Inflector::slug($basename);
+    }
+
+    public function getBasedOnAttributes()
+    {
+        preg_match_all('/{\.(.*?)}/', $this->template, $matches);
+
+        $replacements = [];
+
+        $attributes = ArrayHelper::getValue($matches, 1);
+
+        if ($attributes && is_array($attributes)) {
+            foreach ($attributes as $attribute) {
+                $replacements[] = ArrayHelper::getValue($this->model, $attribute);
+            }
+        }
+
+        return $replacements;
     }
 
     /**
@@ -348,7 +345,7 @@ class ImageDescriptor extends Object
     /**
      *
      */
-    public function onAfterUpdate() {
-
+    public function onAfterUpdate()
+    {
     }
 }
