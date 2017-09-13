@@ -274,7 +274,7 @@ class ImageDescriptor extends Object
 
         $replacements = [];
 
-        foreach ($this->getBasedOnAttributes() as $attribute) {
+        foreach ($this->getBaseAttributes() as $attribute) {
             $replacements["{.$attribute}"] = ArrayHelper::getValue($this->model, $attribute);
         }
 
@@ -291,21 +291,17 @@ class ImageDescriptor extends Object
         return Inflector::slug($basename);
     }
 
-    public function getBasedOnAttributes()
+    public function getBaseAttributes()
     {
         preg_match_all('/{\.(.*?)}/', $this->template, $matches);
 
-        $replacements = [];
-
         $attributes = ArrayHelper::getValue($matches, 1);
 
-        if ($attributes && is_array($attributes)) {
-            foreach ($attributes as $attribute) {
-                $replacements[] = ArrayHelper::getValue($this->model, $attribute);
-            }
+        if (!$attributes || !is_array($attributes)) {
+            $attributes = [];
         }
 
-        return $replacements;
+        return $attributes;
     }
 
     /**
@@ -325,13 +321,6 @@ class ImageDescriptor extends Object
      */
     public function onBeforeUpdate()
     {
-        $connector = $this->createConnector();
-        $source    = $this->model->{$this->attribute};
-
-        if ($source) {
-            $this->model->{$this->attribute} = ($destination = $this->getFilename());
-            $connector->rename($source, $destination);
-        }
     }
 
     /**
@@ -347,5 +336,12 @@ class ImageDescriptor extends Object
      */
     public function onAfterUpdate()
     {
+        $connector = $this->createConnector();
+        $source    = $this->model->{$this->attribute};
+
+        if ($source) {
+            $this->model->{$this->attribute} = ($destination = $this->getFilename());
+            $connector->rename($source, $destination);
+        }
     }
 }

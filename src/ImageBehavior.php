@@ -10,6 +10,7 @@ namespace vr\image;
 
 use vr\image\sources\ImageSource;
 use yii\base\Behavior;
+use yii\db\ActiveRecord;
 use yii\db\BaseActiveRecord;
 
 /**
@@ -71,6 +72,8 @@ class ImageBehavior extends Behavior
      * @var bool
      */
     public $skipUpdateOnClean = !YII_DEBUG;
+
+    private $changeQueue = [];
 
     /**
      * @inheritdoc
@@ -171,8 +174,19 @@ class ImageBehavior extends Behavior
      */
     public function onBeforeUpdate()
     {
+        $this->changeQueue = [];
+
+        /** @var ActiveRecord $activeRecord */
+        $activeRecord = $this->owner;
+
         /** @var ImageDescriptor $descriptor */
         foreach ($this->descriptors as $attribute => $descriptor) {
+            $dirtyAttributes = $activeRecord->getDirtyAttributes($descriptor->getBaseAttributes());
+
+            if (count($dirtyAttributes)) {
+                $this->changeQueue[] = $attribute;
+            }
+
             $descriptor->onBeforeUpdate();
         }
     }
@@ -184,7 +198,9 @@ class ImageBehavior extends Behavior
     {
         /** @var ImageDescriptor $descriptor */
         foreach ($this->descriptors as $attribute => $descriptor) {
-            $descriptor->onAfterUpdate();
+            if (in_array($attribute, $this->changeQueue)) {
+                $descriptor->onAfterUpdate();
+            }
         }
     }
 
