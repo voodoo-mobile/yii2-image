@@ -17,6 +17,7 @@ use yii\base\Model;
 use yii\base\Object;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
+use yii\validators\UrlValidator;
 
 /**
  * Class ImageDescriptor
@@ -77,10 +78,14 @@ class ImageDescriptor extends Object
      */
     public function url($attribute, $dimension = null, $utm = true)
     {
+        $filename = $this->model->{$attribute};
+
+        if ((new UrlValidator())->validate($filename)) {
+            return $filename;
+        }
+
         /** @var DataConnector $connector */
         $connector = $this->createConnector();
-
-        $filename = $this->model->{$attribute};
 
         if (!empty($filename) && !empty($dimension) && $connector->exists($filename)) {
             $filename = $this->createThumbnail($connector, $filename, $dimension);
