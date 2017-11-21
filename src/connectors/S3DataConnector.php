@@ -96,6 +96,10 @@ class S3DataConnector extends DataConnector
 
         $destination = $this->locate($destination);
 
+        if (!$this->client->doesObjectExist($this->bucket, $source)) {
+            return false;
+        }
+
         $this->client->copyObject([
             'Bucket'     => $this->bucket,
             'Key'        => $destination,
