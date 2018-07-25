@@ -12,8 +12,14 @@ use yii\base\Object;
  */
 abstract class ImageSource extends Object
 {
+    /**
+     * @return mixed
+     */
     abstract public function createMediator();
 
+    /**
+     * @return bool
+     */
     public function validate()
     {
         // TODO: for future use
